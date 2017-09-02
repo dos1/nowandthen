@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Now and Then
+Exec=nowandthen
+Comment=Now and Then
+Icon=nowandthen
+Terminal=false
+Categories=Game;ArcadeGame;
