@@ -35,6 +35,9 @@ struct GamestateResources {
 		ALLEGRO_SHADER *shader;
 		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
 
+		ALLEGRO_SAMPLE *yay1s, *yay2s, *yay3s, *balls;
+		ALLEGRO_SAMPLE_INSTANCE *yay1, *yay2, *yay3, *ballsound;
+
 		ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind;
 
 		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores;
@@ -99,6 +102,7 @@ bool CheckCollision(struct Game *game, struct GamestateResources* data, int Px, 
 		//PrintConsole(game, "dx %f, dy %f", data->dx, data->dy);
 
 		data->cooldown = 10;
+		al_play_sample_instance(data->ballsound);
 
 		return true;
 	} else if ((!isnan(x2)) && (IsBetween(x2, Px, xlim))) {
@@ -113,6 +117,7 @@ bool CheckCollision(struct Game *game, struct GamestateResources* data, int Px, 
 
 		data->cooldown = 10;
 
+		al_play_sample_instance(data->ballsound);
 		return true;
 	}
 	return false;
@@ -136,6 +141,9 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 			PrintConsole(game, "POINT FOR RIGHT");
 			data->rightscore ++;
 		}
+		ALLEGRO_SAMPLE_INSTANCE *yays[3] = {data->yay1, data->yay2, data->yay3};
+		al_play_sample_instance(yays[rand() % 3]);
+
 		data->dx = 12 * (((rand()%2) * 2) - 1);
 		data->dy = 4;
 		data->ballx = 1920/2;
@@ -562,6 +570,32 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->big = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 200, 0);
 
 	progress(game); // report that we progressed with the loading, so the engine can draw a progress bar
+
+
+	data->yay1s = al_load_sample( GetDataFilePath(game, "sounds/yay1.flac") );
+	data->yay1 = al_create_sample_instance(data->yay1s);
+	al_attach_sample_instance_to_mixer(data->yay1, game->audio.fx);
+	al_set_sample_instance_gain(data->yay1, 2.2);
+	al_set_sample_instance_playmode(data->yay1, ALLEGRO_PLAYMODE_ONCE);
+
+	data->yay2s = al_load_sample( GetDataFilePath(game, "sounds/yay2.flac") );
+	data->yay2 = al_create_sample_instance(data->yay2s);
+	al_attach_sample_instance_to_mixer(data->yay2, game->audio.fx);
+	al_set_sample_instance_gain(data->yay2, 2.2);
+	al_set_sample_instance_playmode(data->yay2, ALLEGRO_PLAYMODE_ONCE);
+
+	data->yay3s = al_load_sample( GetDataFilePath(game, "sounds/yay3.flac") );
+	data->yay3 = al_create_sample_instance(data->yay3s);
+	al_attach_sample_instance_to_mixer(data->yay3, game->audio.fx);
+	al_set_sample_instance_gain(data->yay3, 2.2);
+	al_set_sample_instance_playmode(data->yay3, ALLEGRO_PLAYMODE_ONCE);
+
+	data->balls = al_load_sample( GetDataFilePath(game, "sounds/ball.flac") );
+	data->ballsound = al_create_sample_instance(data->balls);
+	al_attach_sample_instance_to_mixer(data->ballsound, game->audio.fx);
+	al_set_sample_instance_gain(data->ballsound, 2.2);
+	al_set_sample_instance_playmode(data->ballsound, ALLEGRO_PLAYMODE_ONCE);
+
 
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.png"));
 	data->bg2 = al_load_bitmap(GetDataFilePath(game, "bg2.png"));
