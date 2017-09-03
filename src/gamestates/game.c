@@ -31,6 +31,7 @@ struct GamestateResources {
 		// It gets created on load and then gets passed around to all other function calls.
 		int counter;
 
+		ALLEGRO_FONT *big, *small;
 		ALLEGRO_SHADER *shader;
 		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
 
@@ -350,6 +351,7 @@ if (time < 0.779) {
 	//al_draw_textf(game->_priv.font_console, al_map_rgb(255,255,255), 250, 150, ALLEGRO_ALIGN_LEFT, "%f", time);
 
 	al_draw_filled_rectangle(0, 0, 1920, 1080, al_map_rgba_f(0,0,0,night*0.333));
+
 }
 
 void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
@@ -447,8 +449,8 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	al_draw_bitmap(data->scores, 462, 960, 0);
 
-	al_draw_textf(game->_priv.font_console, al_map_rgb(0,0,0), 512, 990, ALLEGRO_ALIGN_LEFT, "Now: %d", data->leftscore);
-	al_draw_textf(game->_priv.font_console, al_map_rgb(0,0,0), 1122, 982, ALLEGRO_ALIGN_LEFT, "Then: %d", data->rightscore);
+	al_draw_textf(data->small, al_map_rgb(0,0,0), 520, 990, ALLEGRO_ALIGN_LEFT, "Now: %d", data->leftscore);
+	al_draw_textf(data->small, al_map_rgb(0,0,0), 1122, 987, ALLEGRO_ALIGN_LEFT, "Then: %d", data->rightscore);
 
 	al_draw_scaled_rotated_bitmap(data->ball, al_get_bitmap_width(data->ball)/2, al_get_bitmap_height(data->ball)/2,
 																data->ballx, data->bally, 0.75, 0.75, data->ballrot, 0);
@@ -465,6 +467,39 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 */
 
 //	PrintConsole(game, "%f %f", x1, x2);
+
+
+	if (!data->started) {
+		char* text;
+		if (data->leftscore==10) {
+			text = "Now wins!";
+		} else if (data->rightscore==10) {
+			text = "Then wins!";
+		} else {
+			text = "Now and Then";
+		}
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 - 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 + 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 - 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 + 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 + 0, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 + 0, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 + 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(0,0,0), 1920/2 - 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
+		al_draw_text(data->big, al_map_rgb(255,255,255), 1920/2, 160, ALLEGRO_ALIGN_CENTER, text);
+
+
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 - 4, 860 - 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 + 4, 860 + 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 + 4, 860 - 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 - 4, 860 + 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 - 4, 860 - 0, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 + 4, 860 - 0, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 - 0, 860 - 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(0,0,0), 1920/2 - 0, 860 + 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+		al_draw_text(data->small, al_map_rgb(255,255,255), 1920/2, 860, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
+
+	}
 }
 
 void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, ALLEGRO_EVENT *ev) {
@@ -522,6 +557,9 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	// Good place for allocating memory, loading bitmaps etc.
 	struct GamestateResources *data = calloc(1, sizeof(struct GamestateResources));
 	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
+
+	data->small = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 53, 0);
+	data->big = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 200, 0);
 
 	progress(game); // report that we progressed with the loading, so the engine can draw a progress bar
 
