@@ -34,6 +34,8 @@ struct GamestateResources {
 		ALLEGRO_SHADER *shader;
 		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
 
+		ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind;
+
 		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores;
 
 //		ALLEGRO_BITMAP *dzik, *ostronos, *owca;
@@ -119,6 +121,9 @@ bool CheckCollision(struct Game *game, struct GamestateResources* data, int Px, 
 void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	// Called 60 times per second. Here you should do all your game logic.
 	data->counter++;
+
+	al_set_audio_stream_gain(data->rewind, fmax(data->fade_left, data->fade_right)*2);
+	al_set_audio_stream_speed(data->rewind, fmax(data->fade_left, data->fade_right));
 
 	data->ballrot += 0.02 + fabs(data->dx)*0.0025 + fabs(data->dy)*0.0025;
 
@@ -221,7 +226,7 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	}
 }
 
-void DrawScene(struct Game *game, struct GamestateResources* data, double time) {
+void DrawScene(struct Game *game, struct GamestateResources* data, double time, double speed, ALLEGRO_AUDIO_STREAM *daystream, ALLEGRO_AUDIO_STREAM *nightstream) {
 	al_set_target_bitmap(data->scene);
 	al_clear_to_color(al_map_rgba(0,0,0,0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
@@ -236,6 +241,12 @@ void DrawScene(struct Game *game, struct GamestateResources* data, double time) 
 		}
 		//fmin(fmin(night*5, 1.0), fmax(1.0-(night*5), 0));
 	}
+
+	al_set_audio_stream_gain(daystream, 1.0-night);
+	al_set_audio_stream_gain(nightstream, night);
+	al_set_audio_stream_speed(daystream, 1.0+speed);
+	al_set_audio_stream_speed(nightstream, 1.0+speed);
+
 //	PrintConsole(game, "time=%f, night=%f", time, night);
 	al_draw_tinted_bitmap(data->bg2, al_map_rgba_f(night, night, night, night), 0, 0, 0);
 
@@ -315,13 +326,17 @@ if (time < 0.779) {
 
 	al_draw_bitmap(data->trees, 0, 0, 0);
 
-	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+
+	ALLEGRO_BITMAP *beeframes[3] = {data->bee1, data->bee2, data->bee3};
+	ALLEGRO_BITMAP *bee = beeframes[(data->counter / 5) % 3];
+
+	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
 												 (time-0.2)*200 * 1920, 650, sin(time*12000)/6.0, 0);
 
-	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
 												 (time-0.7)*200 * 1920, 250, sin(time*12000)/6.0, 0);
 
-	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
 												 (time-0.9)*200 * 1920, 750, sin(time*12000)/6.0, 0);
 
 
@@ -341,7 +356,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
 
-	DrawScene(game, data, data->time_left);
+	DrawScene(game, data, data->time_left, data->fade_left, data->day1, data->night1);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0,0,0,0));
@@ -380,7 +395,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	// right
 
-	DrawScene(game, data, data->time_right);
+	DrawScene(game, data, data->time_right, data->fade_right, data->day2, data->night2);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0,0,0,0));
@@ -530,6 +545,32 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->bee2 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka2.png"));
 	data->bee3 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka3.png"));
 
+	data->rewind = al_load_audio_stream(GetDataFilePath(game, "sounds/rewind.ogg"), 8, 1024);
+	al_set_audio_stream_gain(data->rewind, 0);
+	al_set_audio_stream_playmode(data->rewind, ALLEGRO_PLAYMODE_LOOP);
+	al_attach_audio_stream_to_mixer(data->rewind, game->audio.fx);
+
+
+	data->day1 = al_load_audio_stream(GetDataFilePath(game, "sounds/day1.ogg"), 8, 1024);
+	al_attach_audio_stream_to_mixer(data->day1, game->audio.fx);
+	al_set_audio_stream_playmode(data->day1, ALLEGRO_PLAYMODE_LOOP);
+
+		al_set_audio_stream_pan(data->day1, -0.5);
+	data->day2 = al_load_audio_stream(GetDataFilePath(game, "sounds/day2.ogg"), 8, 1024);
+	al_attach_audio_stream_to_mixer(data->day2, game->audio.fx);
+	al_set_audio_stream_pan(data->day2, 0.5);
+	al_set_audio_stream_playmode(data->day2, ALLEGRO_PLAYMODE_LOOP);
+
+	data->night1 = al_load_audio_stream(GetDataFilePath(game, "sounds/night1.ogg"), 8, 1024);
+	al_attach_audio_stream_to_mixer(data->night1, game->audio.fx);
+	al_set_audio_stream_pan(data->night1, -0.5);
+	al_set_audio_stream_playmode(data->night1, ALLEGRO_PLAYMODE_LOOP);
+	data->night2 = al_load_audio_stream(GetDataFilePath(game, "sounds/night2.ogg"), 8, 1024);
+	al_attach_audio_stream_to_mixer(data->night2, game->audio.fx);
+	al_set_audio_stream_pan(data->night2, 0.5);
+	al_set_audio_stream_playmode(data->night2, ALLEGRO_PLAYMODE_LOOP);
+
+
 	data->ball = al_load_bitmap(GetDataFilePath(game, "ball.png"));
 
 	data->clock1 = al_load_bitmap(GetDataFilePath(game, "clock1.png"));
@@ -566,6 +607,12 @@ void Gamestate_Unload(struct Game *game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->frame);
 	al_destroy_bitmap(data->target);
+
+	al_destroy_audio_stream(data->day1);
+	al_destroy_audio_stream(data->day2);
+	al_destroy_audio_stream(data->night1);
+	al_destroy_audio_stream(data->night2);
+	al_destroy_audio_stream(data->rewind);
 	free(data);
 }
 
