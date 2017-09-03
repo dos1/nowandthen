@@ -31,9 +31,9 @@ struct GamestateResources {
 		ALLEGRO_SAMPLE_INSTANCE *sound, *kbd, *key;
 		ALLEGRO_BITMAP *bitmap, *checkerboard, *pixelator;
 		int pos, fade, tick, tan;
+		struct Timeline *timeline;
 		char text[255];
 		bool underscore, fadeout;
-		struct Timeline *timeline;
 };
 
 int Gamestate_ProgressCount = 5;
@@ -120,7 +120,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 		al_clear_to_color(al_map_rgba(0,0,0,0));
 
 		al_draw_text(data->font, al_map_rgba(255,255,255,10), 320/2,
-		             180*0.4167, ALLEGRO_ALIGN_CENTRE, t);
+								 180*0.4167, ALLEGRO_ALIGN_CENTRE, t);
 
 		double tg = tan(-data->tan/384.0 * ALLEGRO_PI - ALLEGRO_PI/2);
 
@@ -130,12 +130,12 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 		al_clear_to_color(al_map_rgb(35, 31, 32));
 
 		al_draw_tinted_scaled_bitmap(data->bitmap, al_map_rgba(fade, fade, fade, fade), 0, 0,
-		                             al_get_bitmap_width(data->bitmap), al_get_bitmap_height(data->bitmap),
-		                             -tg*al_get_bitmap_width(data->bitmap)*0.05,
-		                             -tg*al_get_bitmap_height(data->bitmap)*0.05,
-		                             al_get_bitmap_width(data->bitmap)+tg*0.1*al_get_bitmap_width(data->bitmap),
-		                             al_get_bitmap_height(data->bitmap)+tg*0.1*al_get_bitmap_height(data->bitmap),
-		                             0);
+																 al_get_bitmap_width(data->bitmap), al_get_bitmap_height(data->bitmap),
+																 -tg*al_get_bitmap_width(data->bitmap)*0.05,
+																 -tg*al_get_bitmap_height(data->bitmap)*0.05,
+																 al_get_bitmap_width(data->bitmap)+tg*0.1*al_get_bitmap_width(data->bitmap),
+																 al_get_bitmap_height(data->bitmap)+tg*0.1*al_get_bitmap_height(data->bitmap),
+																 0);
 
 		al_draw_bitmap(data->checkerboard, 0, 0, 0);
 
@@ -201,7 +201,7 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	(*progress)(game);
 
 	data->font = al_load_ttf_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"),
-	                              (int)(180*0.1666 / 8) * 8, 0);
+																(int)(180*0.1666 / 8) * 8, 0);
 	(*progress)(game);
 	data->sample = al_load_sample( GetDataFilePath(game, "dosowisko.flac") );
 	data->sound = al_create_sample_instance(data->sample);
