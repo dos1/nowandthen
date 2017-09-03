@@ -301,6 +301,47 @@ void DrawScene(struct Game *game, struct GamestateResources* data, double time, 
 
 
 
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.9)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.5-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.79-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.1)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.2)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.55)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.14-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.87-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.96)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.05)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.22-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+
+
+
 if (time < 0.859) {
 	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
 												 (0.88-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
@@ -685,6 +726,15 @@ void Gamestate_Unload(struct Game *game, struct GamestateResources* data) {
 	al_destroy_audio_stream(data->night1);
 	al_destroy_audio_stream(data->night2);
 	al_destroy_audio_stream(data->rewind);
+
+	al_destroy_sample_instance(data->yay1);
+	al_destroy_sample_instance(data->yay2);
+	al_destroy_sample_instance(data->yay3);
+	al_destroy_sample_instance(data->ballsound);
+	al_destroy_sample(data->yay1s);
+	al_destroy_sample(data->yay2s);
+	al_destroy_sample(data->yay3s);
+	al_destroy_sample(data->balls);
 	free(data);
 }
 
