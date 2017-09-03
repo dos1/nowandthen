@@ -19,6 +19,7 @@
  */
 
 #include "../common.h"
+#include <math.h>
 #include <libsuperderpy.h>
 
 struct GamestateResources {
@@ -28,11 +29,17 @@ struct GamestateResources {
 		int blink_counter, counter;
 
 		ALLEGRO_SHADER *shader;
-		ALLEGRO_BITMAP *bg, *target, *frame;
+		ALLEGRO_BITMAP *bg, *target, *frame, *scene;
+
+		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2;
+
+		ALLEGRO_BITMAP *leaf;
 
 		float fade_left, fade_right;
 		bool forward;
 		bool backward;
+
+		double time_left, time_right;
 };
 
 int Gamestate_ProgressCount = 1; // number of loading steps as reported by Gamestate_Load
@@ -45,8 +52,12 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 		data->blink_counter = 0;
 	}
 
+	data->time_left += 1.0 / 24.0 / 60.0 / 60.0;
+	data->time_right += 1.0 / 24.0 / 60.0 / 60.0;
+
 	if (data->backward) {
 		data->fade_left += 0.025;
+		data->time_left += 1.0 / 24.0 / 60.0;
 		if (data->fade_left > 1) {
 			data->fade_left = 1;
 		}
@@ -59,6 +70,7 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 
 	if (data->forward) {
 		data->fade_right += 0.025;
+		data->time_right += 1.0 / 24.0 / 60.0;
 		if (data->fade_right > 1) {
 			data->fade_right = 1;
 		}
@@ -70,6 +82,13 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	}
 }
 
+void DrawScene(struct Game *game, struct GamestateResources* data, double time) {
+	al_set_target_bitmap(data->scene);
+	al_clear_to_color(al_map_rgba(0,0,0,0));
+	al_draw_bitmap(data->bg, 0, 0, 0);
+	al_draw_bitmap(data->leaf, 500 * sin(time*200.0) + 1920/2 - 150, 200, 0);
+}
+
 void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
@@ -78,6 +97,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 								 ALLEGRO_ALIGN_CENTRE, "Nothing to see here, move along!");
 	}
 
+	DrawScene(game, data, data->time_left);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0,0,0,0));
@@ -107,7 +127,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	al_set_shader_float_vector("colorBleedC", 4, colorc, 1);
 	float colorr[4] = {0.8, 0.0, 0.4, 1.0};
 	al_set_shader_float_vector("colorBleedR", 4, colorr, 1);
-	al_draw_bitmap(data->bg, 0, 0, 0);
+	al_draw_scaled_bitmap(data->scene, 0, 0, 1920, 1080, 0, 0, 1920/2, 1080/2, 0);
 	al_use_shader(NULL);
 
 	al_set_target_backbuffer(game->display);
@@ -115,6 +135,8 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 0, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 0, 0, 2, 2, 0, 0);
 
 	// right
+
+	DrawScene(game, data, data->time_right);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0,0,0,0));
@@ -141,7 +163,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	al_set_shader_float_vector("colorBleedL", 4, colorl, 1);
 	al_set_shader_float_vector("colorBleedC", 4, colorc, 1);
 	al_set_shader_float_vector("colorBleedR", 4, colorr, 1);
-	al_draw_bitmap(data->bg, 0, 0, 0);
+	al_draw_scaled_bitmap(data->scene, 0, 0, 1920, 1080, 0, 0, 1920/2, 1080/2, 0);
 	al_use_shader(NULL);
 
 	al_set_target_backbuffer(game->display);
@@ -150,6 +172,16 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 
 	al_draw_bitmap(data->frame, 0, 0, 0);
+
+	al_draw_bitmap(data->clock1, 30, 589, 0);
+	al_draw_rotated_bitmap(data->hand2, 7, 15, 223, 875, data->time_left * 4 * ALLEGRO_PI, 0);
+	al_draw_rotated_bitmap(data->hand1, 8, 14, 223, 875, data->time_left * 4 * ALLEGRO_PI * 24, 0);
+	al_draw_bitmap(data->clockball1, 30, 589, 0);
+
+	al_draw_bitmap(data->clock2, 1491, 552, 0);
+	al_draw_rotated_bitmap(data->hand2, 7, 15, 1672, 879, data->time_right * 4 * ALLEGRO_PI, 0);
+	al_draw_rotated_bitmap(data->hand1, 8, 14, 1672, 879, data->time_right * 4 * ALLEGRO_PI * 24, 0);
+	al_draw_bitmap(data->clockball2, 1491, 552, 0);
 
 }
 
@@ -187,6 +219,17 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.png"));
 	data->frame = al_load_bitmap(GetDataFilePath(game, "frame.png"));
 	data->target = al_create_bitmap(1920/2, 1080/2);
+	data->scene = al_create_bitmap(1920, 1080);
+
+	data->leaf = al_load_bitmap(GetDataFilePath(game, "leaf.png"));
+
+
+	data->clock1 = al_load_bitmap(GetDataFilePath(game, "clock1.png"));
+	data->clock2 = al_load_bitmap(GetDataFilePath(game, "clock2.png"));
+	data->clockball1 = al_load_bitmap(GetDataFilePath(game, "clockball1.png"));
+	data->clockball2 = al_load_bitmap(GetDataFilePath(game, "clockball2.png"));
+	data->hand1 = al_load_bitmap(GetDataFilePath(game, "hand1.png"));
+	data->hand2 = al_load_bitmap(GetDataFilePath(game, "hand2.png"));
 
 	data->shader = al_create_shader(ALLEGRO_SHADER_GLSL);
 	PrintConsole(game, "VERTEX: %d", al_attach_shader_source_file(data->shader, ALLEGRO_VERTEX_SHADER, GetDataFilePath(game, "shaders/vertex.glsl")));
@@ -225,6 +268,8 @@ void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
 	data->counter = 0;
 	data->fade_left = 0;
 	data->fade_right = 0;
+	data->time_left = 0;
+	data->time_right = 0;
 	data->backward = false;
 	data->forward = false;
 }

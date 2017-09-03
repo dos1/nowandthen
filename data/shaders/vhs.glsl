@@ -28,12 +28,11 @@ uniform vec2 RENDERSIZE;
 
 varying vec2 isf_FragNormCoord;
 
-//	Based on https://github.com/staffantan/unity-vhsglitch
-//	Converted by David Lublin / VIDVOX
-
+//  Based on https://www.interactiveshaderformat.com/sketches/871
+//	which was based on https://github.com/staffantan/unity-vhsglitch
+//	and converted by David Lublin / VIDVOX
 
 const float tau = 6.28318530718;
-
 
 float rand(vec3 co){
 	return abs(mod(sin( dot(co.xyz ,vec3(12.9898,78.233,45.5432) )) * 43758.5453, 1.0));
@@ -43,7 +42,6 @@ void main()	{
 	float	actualXLine = (!autoScan) ? xScanline : mod(xScanline + ((1.0+sin(0.34*TIME))/2.0 + (1.0+sin(TIME))/3.0 + (1.0+cos(2.1*TIME))/3.0 + (1.0+cos(0.027*TIME))/2.0)/3.5,1.0);
 	float	actualXLineWidth = (!autoScan) ? xScanlineSize : 2.0 * xScanlineSize * ((1.0+sin(1.2*TIME))/2.0 + (1.0+cos(3.91*TIME))/3.0 + (1.0+cos(0.014*TIME))/2.0)/3.5;
 	vec2 loc = isf_FragNormCoord;
-	vec4 vhs = texture2D(al_tex, loc);
 	float	dx = 1.0+actualXLineWidth/25.0-abs(distance(loc.y, actualXLine));
 	float	dx2 = 1.0+xScanlineSize2/10.0-abs(distance(loc.y, xScanline2));
 	float	dy = (1.0-abs(distance(loc.y, yScanline)));
@@ -61,7 +59,6 @@ void main()	{
 	if (dx2 > 1.0 - xScanlineSize2 / 10.0)	{
 		float	rX2 = (dy * rand(vec3(dy,dx2,dx)) + dx2) / 4.0;
 		float	distortAmount = analogDistort * (sin(rX * tau / dx2) + cos(rX * tau * 0.78 / dx2)) / 10.0;
-		//loc.y = xScanline2;
 		loc.x += (1.0 + distortAmount * sin(tau * (loc.x) / rX2 ) - 1.0) / 15.0;
 	}
 	if (dx > 1.0 - actualXLineWidth / 25.0) {

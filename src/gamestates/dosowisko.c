@@ -22,8 +22,8 @@
 #include <math.h>
 #include <libsuperderpy.h>
 
-#define NEXT_GAMESTATE "empty"
-#define SKIP_GAMESTATE NEXT_GAMESTATE
+#define NEXT_GAMESTATE "holypangolin"
+#define SKIP_GAMESTATE "game"
 
 struct GamestateResources {
 		ALLEGRO_FONT *font;
@@ -31,9 +31,9 @@ struct GamestateResources {
 		ALLEGRO_SAMPLE_INSTANCE *sound, *kbd, *key;
 		ALLEGRO_BITMAP *bitmap, *checkerboard, *pixelator;
 		int pos, fade, tick, tan;
-		struct Timeline *timeline;
 		char text[255];
 		bool underscore, fadeout;
+		struct Timeline *timeline;
 };
 
 int Gamestate_ProgressCount = 5;
