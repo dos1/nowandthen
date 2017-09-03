@@ -38,7 +38,7 @@ struct GamestateResources {
 		ALLEGRO_SAMPLE *yay1s, *yay2s, *yay3s, *balls;
 		ALLEGRO_SAMPLE_INSTANCE *yay1, *yay2, *yay3, *ballsound;
 
-		ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind;
+		ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind, *music;
 
 		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores;
 
@@ -154,6 +154,8 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 
 	if ((data->leftscore >= 10) || (data->rightscore >= 10)) {
 		data->started = false;
+		al_set_audio_stream_playing(data->music, false);
+
 	}
 
 	if (data->time_left > 1) {
@@ -589,7 +591,11 @@ void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, 
 		data->backward_left = false;
 	}
 	if ((ev->type==ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_SPACE)) {
+		if (data->started) return;
 		data->dx = 12 * (((rand()%2) * 2) - 1);
+		al_rewind_audio_stream(data->music);
+		al_set_audio_stream_playing(data->music, true);
+
 		data->dy = 4;
 		data->ballx = 1920/2;
 		data->bally = 1080/2 - 100;
@@ -663,6 +669,11 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	al_set_audio_stream_playmode(data->rewind, ALLEGRO_PLAYMODE_LOOP);
 	al_attach_audio_stream_to_mixer(data->rewind, game->audio.fx);
 
+	data->music = al_load_audio_stream(GetDataFilePath(game, "sounds/music.flac"), 8, 1024);
+	al_attach_audio_stream_to_mixer(data->music, game->audio.music);
+	al_set_audio_stream_playmode(data->music, ALLEGRO_PLAYMODE_LOOP);
+	al_set_audio_stream_playing(data->music, false);
+
 
 	data->day1 = al_load_audio_stream(GetDataFilePath(game, "sounds/day1.ogg"), 8, 1024);
 	al_attach_audio_stream_to_mixer(data->day1, game->audio.fx);
@@ -726,6 +737,7 @@ void Gamestate_Unload(struct Game *game, struct GamestateResources* data) {
 	al_destroy_audio_stream(data->night1);
 	al_destroy_audio_stream(data->night2);
 	al_destroy_audio_stream(data->rewind);
+	al_destroy_audio_stream(data->music);
 
 	al_destroy_sample_instance(data->yay1);
 	al_destroy_sample_instance(data->yay2);
