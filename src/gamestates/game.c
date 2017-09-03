@@ -22,17 +22,25 @@
 #include <math.h>
 #include <libsuperderpy.h>
 
+struct Animal {
+		ALLEGRO_BITMAP *bitmap, *bitmap_sitting;
+};
+
 struct GamestateResources {
 		// This struct is for every resource allocated and used by your gamestate.
 		// It gets created on load and then gets passed around to all other function calls.
 		int counter;
 
 		ALLEGRO_SHADER *shader;
-		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene;
+		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
 
 		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores;
 
-		ALLEGRO_BITMAP *leaf;
+//		ALLEGRO_BITMAP *dzik, *ostronos, *owca;
+
+		struct Animal dzik, ostronos, owca, leaf;
+
+//		ALLEGRO_BITMAP *leaf;
 
 		float fade_left, fade_right;
 		bool forward_left, forward_right;
@@ -43,7 +51,7 @@ struct GamestateResources {
 
 		float dx, dy;
 
-		float ballx, bally;
+		float ballx, bally, ballrot;
 
 		float cooldown;
 
@@ -111,6 +119,8 @@ bool CheckCollision(struct Game *game, struct GamestateResources* data, int Px, 
 void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	// Called 60 times per second. Here you should do all your game logic.
 	data->counter++;
+
+	data->ballrot += 0.02 + fabs(data->dx)*0.0025 + fabs(data->dy)*0.0025;
 
 	if ((data->bally > (1080+42)) || (data->ballx < -42) || (data->ballx > (1920+42))) {
 		if (data->scoreleft) {
@@ -229,8 +239,100 @@ void DrawScene(struct Game *game, struct GamestateResources* data, double time) 
 //	PrintConsole(game, "time=%f, night=%f", time, night);
 	al_draw_tinted_bitmap(data->bg2, al_map_rgba_f(night, night, night, night), 0, 0, 0);
 
-	al_draw_bitmap(data->leaf, 500 * sin(time*200.0) + 1920/2 - 150, 260, 0);
+
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 time*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (1-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.05-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.1)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.15)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.75-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.8)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.666-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.20-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.7)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (time-0.95)*30 * 1920, 450, sin(time*6000)/5.0, 0);
+
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.6-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+
+
+
+if (time < 0.859) {
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.88-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+} else if ((time >= 0.859) && (time <= 0.9)) {
+	al_draw_bitmap(data->owca.bitmap_sitting, (0.88-0.859)*30 * 1920 - 100, 300, 0);
+} else {
+	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.92-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+}
+
+
+if (time < 0.759) {
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.78-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+} else if ((time >= 0.759) && (time <= 0.8)) {
+	al_draw_bitmap(data->dzik.bitmap_sitting, (0.78-0.759)*30 * 1920 - 100, 300, 0);
+} else {
+	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.82-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+}
+
+if (time < 0.779) {
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.80-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+} else if ((time >= 0.779) && (time <= 0.82)) {
+	al_draw_bitmap(data->ostronos.bitmap_sitting, (0.80-0.779)*30 * 1920, 350, ALLEGRO_FLIP_HORIZONTAL);
+} else {
+	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+												 (0.84-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
+}
+
+
 	al_draw_bitmap(data->trees, 0, 0, 0);
+
+	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+												 (time-0.2)*200 * 1920, 650, sin(time*12000)/6.0, 0);
+
+	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+												 (time-0.7)*200 * 1920, 250, sin(time*12000)/6.0, 0);
+
+	al_draw_rotated_bitmap(data->bee1, al_get_bitmap_width(data->bee1)/2, al_get_bitmap_height(data->bee1)/2,
+												 (time-0.9)*200 * 1920, 750, sin(time*12000)/6.0, 0);
+
+
+	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap)/2, al_get_bitmap_height(data->leaf.bitmap)/2,
+												 (0.3-time)*50 * 1920, (0.3-time)*50 * 1080, time*1000, 0);
+
+	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap)/2, al_get_bitmap_height(data->leaf.bitmap)/2,
+												 (time-0.4)*70 * 1920, (time-0.4)*80 * 1080, time*1000, 0);
+
+
+	//al_draw_textf(game->_priv.font_console, al_map_rgb(255,255,255), 250, 150, ALLEGRO_ALIGN_LEFT, "%f", time);
 
 	al_draw_filled_rectangle(0, 0, 1920, 1080, al_map_rgba_f(0,0,0,night*0.333));
 }
@@ -312,6 +414,8 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 1920/4, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 1920/2, 0, 2, 2, 0, 0);
 
+	//al_draw_scaled_bitmap(data->target, 0, 0, 1920/2, 1080/2, 0, 0, 1920, 1080, 0);
+
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
 	al_draw_bitmap(data->clock1, 30, 589, 0);
@@ -332,7 +436,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	al_draw_textf(game->_priv.font_console, al_map_rgb(0,0,0), 1122, 982, ALLEGRO_ALIGN_LEFT, "Then: %d", data->rightscore);
 
 	al_draw_scaled_rotated_bitmap(data->ball, al_get_bitmap_width(data->ball)/2, al_get_bitmap_height(data->ball)/2,
-																data->ballx, data->bally, 0.75, 0.75, 0, 0);
+																data->ballx, data->bally, 0.75, 0.75, data->ballrot, 0);
 
 
 /*
@@ -413,7 +517,18 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->target = al_create_bitmap(1920/2, 1080/2);
 	data->scene = al_create_bitmap(1920, 1080);
 
-	data->leaf = al_load_bitmap(GetDataFilePath(game, "leaf.png"));
+	data->leaf.bitmap = al_load_bitmap(GetDataFilePath(game, "leaf.png"));
+
+	data->ostronos.bitmap = al_load_bitmap(GetDataFilePath(game, "animals/ostronos.png"));
+	data->owca.bitmap = al_load_bitmap(GetDataFilePath(game, "animals/owca.png"));
+	data->dzik.bitmap = al_load_bitmap(GetDataFilePath(game, "animals/dzik.png"));
+	data->ostronos.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/ostronos1.png"));
+	data->owca.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/owca1.png"));
+	data->dzik.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/dzik1.png"));
+
+	data->bee1 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka1.png"));
+	data->bee2 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka2.png"));
+	data->bee3 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka3.png"));
 
 	data->ball = al_load_bitmap(GetDataFilePath(game, "ball.png"));
 
@@ -469,6 +584,7 @@ void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
 	data->forward_left = false;
 	data->lastbackward_left = false;
 	data->lastbackward_right = false;
+	data->ballrot = 0;
 
 	data->started = false;
 	data->dx = 0;
