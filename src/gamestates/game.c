@@ -22,8 +22,19 @@
 #include <math.h>
 #include <libsuperderpy.h>
 
-struct Animal {
+struct AnimalRes {
 		ALLEGRO_BITMAP *bitmap, *bitmap_sitting;
+		int benchPos;
+};
+
+struct Animal {
+		float time;
+		bool toRight;
+		float benchAt;
+		float benchFor;
+		float afterBench;
+		bool flipBench;
+		struct AnimalRes *animal;
 };
 
 struct GamestateResources {
@@ -44,7 +55,7 @@ struct GamestateResources {
 
 //		ALLEGRO_BITMAP *dzik, *ostronos, *owca;
 
-		struct Animal dzik, ostronos, owca, leaf;
+		struct AnimalRes dzik, ostronos, owca, leaf;
 
 //		ALLEGRO_BITMAP *leaf;
 
@@ -261,120 +272,57 @@ void DrawScene(struct Game *game, struct GamestateResources* data, double time, 
 //	PrintConsole(game, "time=%f, night=%f", time, night);
 	al_draw_tinted_bitmap(data->bg2, al_map_rgba_f(night, night, night, night), 0, 0, 0);
 
+	struct Animal animals[] = {
+		{ .time=0, .toRight = true, .animal = &data->dzik },
+		{ .time=0, .toRight = false, .animal = &data->dzik },
+		{ .time=0.05, .toRight = false, .animal = &data->ostronos },
+		{ .time=0.05, .toRight = true, .animal = &data->owca },
+		{ .time=0.1, .toRight = false, .animal = &data->owca },
+		{ .time=0.1, .toRight = true, .animal = &data->owca },
+		{ .time=0.14, .toRight = false, .animal = &data->ostronos },
+		{ .time=0.15, .toRight = true, .animal = &data->owca },
+		{ .time=0.2, .toRight = false, .animal = &data->ostronos },
+		{ .time=0.22, .toRight = false, .animal = &data->dzik },
+		{ .time=0.2, .toRight = true, .animal = &data->owca },
+		{ .time=0.5, .toRight = false, .animal = &data->ostronos },
+		{ .time=0.55, .toRight = true, .animal = &data->dzik },
+		{ .time=0.6, .toRight = false, .animal = &data->dzik },
+		{ .time=0.666, .toRight = false, .animal = &data->ostronos },
+		{ .time=0.75, .toRight = false, .animal = &data->dzik },
+		{ .time=0.7, .toRight = true, .animal = &data->ostronos },
+		{ .time=0.78, .toRight = false, .animal = &data->dzik, .benchAt = 0.759+0.001736, .benchFor = 0.8-0.759, .flipBench = false, .afterBench = 0.82 },
+		{ .time=0.79, .toRight = false, .animal = &data->owca },
+		{ .time=0.8, .toRight = true, .animal = &data->dzik },
+		{ .time=0.8, .toRight = false, .animal = &data->ostronos, .benchAt = 0.779, .benchFor = 0.82-0.779, .flipBench = true, .afterBench = 0.84 },
+		{ .time=0.87, .toRight = false, .animal = &data->owca },
+		{ .time=0.9, .toRight = true, .animal = &data->dzik },
+		{ .time=0.88, .toRight = false, .animal = &data->owca, .benchAt = 0.859+0.001736, .benchFor = 0.9-0.859, .flipBench = false, .afterBench = 0.92 },
+		{ .time=0.95, .toRight = true, .animal = &data->owca },
+		{ .time=0.96, .toRight = true, .animal = &data->ostronos },
+		{ .time=1, .toRight = false, .animal = &data->ostronos }
+	};
 
+	for (int i=0; i<(sizeof(animals)/sizeof(struct Animal)); i++) {
+		if (animals[i].benchAt) {
+			if ((time >= animals[i].benchAt-0.001736) && (time <= animals[i].benchAt+animals[i].benchFor-0.001736)) {
+				al_draw_bitmap(animals[i].animal->bitmap_sitting, (animals[i].time-animals[i].benchAt)*30 * 1920, animals[i].animal->benchPos, animals[i].flipBench ? ALLEGRO_FLIP_HORIZONTAL : 0);
+			}
+		}
+	}
 
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 time*30 * 1920, 450, sin(time*6000)/5.0, 0);
+	for (int i=0; i<(sizeof(animals)/sizeof(struct Animal)); i++) {
+		float atime = (animals[i].toRight) ? (time-animals[i].time) : (animals[i].time - time);
+		if (animals[i].benchAt) {
+			if (time > animals[i].benchAt+animals[i].benchFor-0.001736) {
+				atime = (animals[i].toRight) ? (time-animals[i].afterBench) : (animals[i].afterBench - time);
+			} else if (time >= animals[i].benchAt-0.001736) {
+				continue;
+			}
+		}
+		al_draw_rotated_bitmap(animals[i].animal->bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+													 atime*30 * 1920, 450, sin(time*6000)/5.0, (animals[i].toRight) ? 0 : ALLEGRO_FLIP_HORIZONTAL);
 
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (1-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.05-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.1)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.15)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.75-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.8)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.666-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.20-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.7)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.95)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.6-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-
-
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.9)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.5-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.79-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.1)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.2)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.55)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.14-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.87-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.96)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (time-0.05)*30 * 1920, 450, sin(time*6000)/5.0, 0);
-
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.22-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-
-
-
-
-if (time < 0.859) {
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.88-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-} else if ((time >= 0.859) && (time <= 0.9)) {
-	al_draw_bitmap(data->owca.bitmap_sitting, (0.88-0.859)*30 * 1920 - 100, 300, 0);
-} else {
-	al_draw_rotated_bitmap(data->owca.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.92-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-}
-
-
-if (time < 0.759) {
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.78-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-} else if ((time >= 0.759) && (time <= 0.8)) {
-	al_draw_bitmap(data->dzik.bitmap_sitting, (0.78-0.759)*30 * 1920 - 100, 300, 0);
-} else {
-	al_draw_rotated_bitmap(data->dzik.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.82-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-}
-
-if (time < 0.779) {
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.80-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-} else if ((time >= 0.779) && (time <= 0.82)) {
-	al_draw_bitmap(data->ostronos.bitmap_sitting, (0.80-0.779)*30 * 1920, 350, ALLEGRO_FLIP_HORIZONTAL);
-} else {
-	al_draw_rotated_bitmap(data->ostronos.bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-												 (0.84-time)*30 * 1920, 450, sin(time*6000)/5.0, ALLEGRO_FLIP_HORIZONTAL);
-}
-
+	}
 
 	al_draw_bitmap(data->trees, 0, 0, 0);
 
@@ -482,7 +430,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 1920/4, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 1920/2, 0, 2, 2, 0, 0);
 
-	//al_draw_scaled_bitmap(data->target, 0, 0, 1920/2, 1080/2, 0, 0, 1920, 1080, 0);
+//	al_draw_scaled_bitmap(data->target, 0, 0, 1920/2, 1080/2, 0, 0, 1920, 1080, 0);
 
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
@@ -659,6 +607,9 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->ostronos.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/ostronos1.png"));
 	data->owca.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/owca1.png"));
 	data->dzik.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/dzik1.png"));
+	data->dzik.benchPos = 300;
+	data->owca.benchPos = 300;
+	data->ostronos.benchPos = 350;
 
 	data->bee1 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka1.png"));
 	data->bee2 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka2.png"));
