@@ -20,6 +20,8 @@
 
 struct CommonResources {
 		// Fill in with common data accessible from all gamestates.
+
+		bool unused; // to not malloc 0 bytes
 };
 
 struct CommonResources* CreateGameData(struct Game *game);

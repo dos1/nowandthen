@@ -11,7 +11,6 @@ uniform bool al_use_tex_matrix;
 uniform mat4 al_tex_matrix;
 varying vec4 varying_color;
 varying vec2 varying_texcoord;
-varying vec2 isf_FragNormCoord;
 
 void main() {
 	varying_color = al_color;
@@ -22,6 +21,4 @@ void main() {
 		varying_texcoord = al_texcoord;
 	}
 	gl_Position = al_projview_matrix * al_pos;
-
-	isf_FragNormCoord = vec2((gl_Position.x+1.0)/2.0, (gl_Position.y+1.0)/2.0);
 }

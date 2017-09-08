@@ -41,7 +41,7 @@ int Gamestate_ProgressCount = 5;
 static const char* text = "# dosowisko.net";
 
 //==================================Timeline manager actions BEGIN
-bool FadeIn(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
+static bool FadeIn(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
 	struct GamestateResources *data = TM_GetArg(action->arguments, 0);
 	if (state == TM_ACTIONSTATE_START) {
 		data->fade=0;
@@ -57,7 +57,7 @@ bool FadeIn(struct Game *game, struct TM_Action *action, enum TM_ActionState sta
 	return false;
 }
 
-bool FadeOut(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
+static bool FadeOut(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
 	struct GamestateResources *data = TM_GetArg(action->arguments, 0);
 	if (state == TM_ACTIONSTATE_START) {
 		data->fadeout = true;
@@ -65,20 +65,20 @@ bool FadeOut(struct Game *game, struct TM_Action *action, enum TM_ActionState st
 	return true;
 }
 
-bool End(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
+static bool End(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
 	if (state == TM_ACTIONSTATE_RUNNING) {
 		SwitchCurrentGamestate(game, NEXT_GAMESTATE);
 	}
 	return true;
 }
 
-bool Play(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
+static bool Play(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
 	ALLEGRO_SAMPLE_INSTANCE *data = TM_GetArg(action->arguments, 0);
 	if (state == TM_ACTIONSTATE_RUNNING) al_play_sample_instance(data);
 	return true;
 }
 
-bool Type(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
+static bool Type(struct Game *game, struct TM_Action *action, enum TM_ActionState state) {
 	struct GamestateResources *data = TM_GetArg(action->arguments, 0);
 	if (state == TM_ACTIONSTATE_RUNNING) {
 		strncpy(data->text, text, data->pos++);
@@ -109,7 +109,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	if (!data->fadeout) {
 
 		char t[255] = "";
-		strcpy(t, data->text);
+		strncpy(t, data->text, 255);
 		if (data->underscore) {
 			strncat(t, "_", 1);
 		} else {
@@ -120,7 +120,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 		al_clear_to_color(al_map_rgba(0,0,0,0));
 
 		al_draw_text(data->font, al_map_rgba(255,255,255,10), 320/2,
-								 180*0.4167, ALLEGRO_ALIGN_CENTRE, t);
+		             180*0.4167, ALLEGRO_ALIGN_CENTRE, t);
 
 		double tg = tan(-data->tan/384.0 * ALLEGRO_PI - ALLEGRO_PI/2);
 
@@ -130,12 +130,12 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 		al_clear_to_color(al_map_rgb(35, 31, 32));
 
 		al_draw_tinted_scaled_bitmap(data->bitmap, al_map_rgba(fade, fade, fade, fade), 0, 0,
-																 al_get_bitmap_width(data->bitmap), al_get_bitmap_height(data->bitmap),
-																 -tg*al_get_bitmap_width(data->bitmap)*0.05,
-																 -tg*al_get_bitmap_height(data->bitmap)*0.05,
-																 al_get_bitmap_width(data->bitmap)+tg*0.1*al_get_bitmap_width(data->bitmap),
-																 al_get_bitmap_height(data->bitmap)+tg*0.1*al_get_bitmap_height(data->bitmap),
-																 0);
+		                             al_get_bitmap_width(data->bitmap), al_get_bitmap_height(data->bitmap),
+		                             -tg*al_get_bitmap_width(data->bitmap)*0.05,
+		                             -tg*al_get_bitmap_height(data->bitmap)*0.05,
+		                             al_get_bitmap_width(data->bitmap)+tg*0.1*al_get_bitmap_width(data->bitmap),
+		                             al_get_bitmap_height(data->bitmap)+tg*0.1*al_get_bitmap_height(data->bitmap),
+		                             0);
 
 		al_draw_bitmap(data->checkerboard, 0, 0, 0);
 
@@ -153,7 +153,7 @@ void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
 	data->tick = 0;
 	data->fadeout = false;
 	data->underscore=true;
-	strcpy(data->text, "#");
+	strncpy(data->text, "#", 255);
 	TM_AddDelay(data->timeline, 300);
 	TM_AddQueuedBackgroundAction(data->timeline, FadeIn, TM_AddToArgs(NULL, 1, data), 0, "fadein");
 	TM_AddDelay(data->timeline, 1500);
@@ -180,6 +180,9 @@ void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, 
 
 void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	struct GamestateResources *data = malloc(sizeof(struct GamestateResources));
+	int flags = al_get_new_bitmap_flags();
+	al_set_new_bitmap_flags(flags ^ ALLEGRO_MAG_LINEAR);
+
 	data->timeline = TM_Init(game, "main");
 	data->bitmap = CreateNotPreservedBitmap(320, 180);
 	data->checkerboard = al_create_bitmap(320, 180);
@@ -201,7 +204,7 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	(*progress)(game);
 
 	data->font = al_load_ttf_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"),
-																(int)(180*0.1666 / 8) * 8, 0);
+	                              (int)(180*0.1666 / 8) * 8, 0);
 	(*progress)(game);
 	data->sample = al_load_sample( GetDataFilePath(game, "dosowisko.flac") );
 	data->sound = al_create_sample_instance(data->sample);
@@ -220,6 +223,8 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	al_attach_sample_instance_to_mixer(data->key, game->audio.fx);
 	al_set_sample_instance_playmode(data->key, ALLEGRO_PLAYMODE_ONCE);
 	(*progress)(game);
+
+	al_set_new_bitmap_flags(flags);
 
 	return data;
 }

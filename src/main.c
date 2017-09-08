@@ -24,7 +24,7 @@
 #include "common.h"
 #include <libsuperderpy.h>
 
-void derp(int sig) {
+static void derp(int sig) {
 	ssize_t __attribute__((unused)) n = write(STDERR_FILENO, "Segmentation fault\nI just don't know what went wrong!\n", 54);
 	abort();
 }
@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
 
 	game->data = CreateGameData(game);
 
-	game->eventHandler = &GlobalEventHandler;
-	game->destroyHandler = &DestroyGameData;
+	game->handlers.event = &GlobalEventHandler;
+	game->handlers.destroy = &DestroyGameData;
 
 	return libsuperderpy_run(game);
 }
