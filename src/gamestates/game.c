@@ -137,7 +137,7 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	data->counter++;
 
 	al_set_audio_stream_gain(data->rewind, fmax(data->fade_left, data->fade_right)*2);
-	al_set_audio_stream_speed(data->rewind, fmax(data->fade_left, data->fade_right));
+	al_set_audio_stream_speed(data->rewind, fmax(0.01, fmax(data->fade_left, data->fade_right)));
 
 	data->ballrot += 0.02 + fabs(data->dx)*0.0025 + fabs(data->dy)*0.0025;
 
