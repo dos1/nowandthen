@@ -42,7 +42,7 @@ struct GamestateResources {
 		// It gets created on load and then gets passed around to all other function calls.
 		int counter;
 
-		ALLEGRO_FONT *big, *small;
+		ALLEGRO_FONT *big, *small, *scorefont;
 		ALLEGRO_SHADER *shader;
 		ALLEGRO_BITMAP *bg, *bg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
 
@@ -51,7 +51,7 @@ struct GamestateResources {
 
 		ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind, *music;
 
-		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores;
+		ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores, *scorebmp;
 
 		struct AnimalRes dzik, ostronos, owca, leaf;
 
@@ -64,18 +64,22 @@ struct GamestateResources {
 
 		float dx, dy;
 
+		int score;
+		int delay;
+
 		float ballx, bally, ballrot;
 
-		float cooldown;
+		int cooldown;
 
 		bool started;
 
 		bool scoreleft;
+		bool lastleft;
 
 		int leftscore, rightscore;
 };
 
-int Gamestate_ProgressCount = 34; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 35; // number of loading steps as reported by Gamestate_Load
 
 static bool IsBetween(float val, float lim1, float lim2) {
 	return ((val >= lim1) && (val <= lim2)) || ((val >= lim2) && (val <= lim1));
@@ -100,11 +104,11 @@ static bool CheckCollision(struct Game *game, struct GamestateResources* data, i
 
 	if ((!isnan(x1)) && (IsBetween(x1, Px, xlim))) {
 		//al_draw_filled_circle(x1, y1, 10, al_map_rgb(0,255,255));
-		data->dx = -data->dx * (1.1 + speed / 3.0);
+		data->dx = -data->dx * (1.03 + speed / 6.0);
 		//data->ballx += data->dx * 4;
 
 		data->dy = ((n - y1)/fabs(n - y1)) * 5.0;
-		data->dy *= 0.9 + ((speed / 3.0) + (rand()/(float)RAND_MAX)/12.0)/2.0;
+		data->dy *= 1.0 + ((speed / 8.0) + (rand()/(float)RAND_MAX)/12.0)/4.0;
 
 		//PrintConsole(game, "dx %f, dy %f", data->dx, data->dy);
 
@@ -115,11 +119,11 @@ static bool CheckCollision(struct Game *game, struct GamestateResources* data, i
 		return true;
 	} else if ((!isnan(x2)) && (IsBetween(x2, Px, xlim))) {
 		//al_draw_filled_circle(x2, y2, 10, al_map_rgb(0,255,255));
-		data->dx = -data->dx * (1.1 + speed / 3.0);
+		data->dx = -data->dx * (1.03 + speed / 6.0);
 		//data->ballx += data->dx * 4;
 
 		data->dy = ((n - y2)/fabs(n - y2)) * 5.0;
-		data->dy *= 0.9 + ((speed / 3.0) + (rand()/(float)RAND_MAX)/12.0)/2.0;
+		data->dy *= 1.0 + ((speed / 8.0) + (rand()/(float)RAND_MAX)/12.0)/4.0;
 
 		//PrintConsole(game, "dx %f, dy %f", data->dx, data->dy);
 
@@ -141,23 +145,49 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 
 	data->ballrot += 0.02 + fabs(data->dx)*0.0025 + fabs(data->dy)*0.0025;
 
-	if ((data->bally > (1080+42)) || (data->ballx < -42) || (data->ballx > (1920+42))) {
-		if (data->scoreleft) {
-			PrintConsole(game, "POINT FOR LEFT");
-			data->leftscore ++;
-		} else{
-			PrintConsole(game, "POINT FOR RIGHT");
-			data->rightscore ++;
-		}
-		ALLEGRO_SAMPLE_INSTANCE *yays[3] = {data->yay1, data->yay2, data->yay3};
-		al_play_sample_instance(yays[rand() % 3]);
+	if (data->delay >= 0) {
+		data->delay--;
+	}
 
-		data->dx = 12 * (((rand()%2) * 2) - 1);
-		data->dy = 4;
-		data->ballx = 1920/2;
-		data->bally = 1080/2 - 100;
-		data->started = true;
-		data->scoreleft = (data->dx < 0);
+	if ((data->bally > (1080+42)) || (data->ballx < -42) || (data->ballx > (1920+42))) {
+		if (data->delay == -1) {
+			if (data->scoreleft) {
+				PrintConsole(game, "POINT FOR LEFT %d", data->score);
+				data->leftscore ++;
+			} else {
+				PrintConsole(game, "POINT FOR RIGHT %d", data->score);
+				data->rightscore ++;
+			}
+			ALLEGRO_SAMPLE_INSTANCE *yays[3] = {data->yay1, data->yay2, data->yay3};
+			al_play_sample_instance(yays[rand() % 3]);
+
+			ALLEGRO_BITMAP *target = al_get_target_bitmap();
+			al_set_target_bitmap(data->scorebmp);
+			al_clear_to_color(al_map_rgba(0,0,0,0));
+
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 - 6, 450 - 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 + 6, 450 + 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 - 6, 450 + 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 + 6, 450 - 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 + 0, 450 + 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 + 0, 450 - 6, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 + 6, 450 + 0, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(0,0,0), 1920/2 - 6, 450 + 0, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+			al_draw_textf(data->scorefont, al_map_rgb(255,255,255), 1920/2, 450, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+
+			al_set_target_bitmap(target);
+
+			data->delay = 120;
+		} else if (data->delay == 60) {
+			data->dx = 12 * (((rand()%2) * 2) - 1);
+			data->dy = 4;
+			data->ballx = 1920/2;
+			data->bally = 1080/2 - 100;
+			data->started = true;
+			data->scoreleft = (data->dx < 0);
+			data->lastleft = data->scoreleft;
+			data->score = 0;
+		}
 	}
 
 	if ((data->leftscore >= 10) || (data->rightscore >= 10)) {
@@ -184,7 +214,7 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 		data->bally += data->dy;
 
 		data->dy += 0.1;
-		data->dx += 0.005 * ((data->dx > 0) ? -1 : 1);
+//		data->dx += 0.005 * ((data->dx > 0) ? -1 : 1);
 	}
 
 	float x1 = data->ballx, y1 = data->bally;
@@ -213,12 +243,21 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 		data->cooldown--;
 	}
 
-	CheckCollision(game, data, 1672, 879, 115, data->time_right * 4 * ALLEGRO_PI, data->fade_left);
-	CheckCollision(game, data, 1672, 879, 138, data->time_right * 4 * ALLEGRO_PI * 24, data->fade_left / 10.0);
+	bool left = false;
+	left = left || CheckCollision(game, data, 1672, 879, 115, data->time_right * 4 * ALLEGRO_PI, data->fade_right);
+	left = left || CheckCollision(game, data, 1672, 879, 138, data->time_right * 4 * ALLEGRO_PI * 24, data->fade_right / 10.0);
 
-	CheckCollision(game, data, 223, 875, 115, data->time_left * 4 * ALLEGRO_PI, data->fade_right);
-	CheckCollision(game, data, 223, 875, 138, data->time_left * 4 * ALLEGRO_PI * 24, data->fade_right / 10.0);
+	bool right = false;
+	right = right || CheckCollision(game, data, 223, 875, 115, data->time_left * 4 * ALLEGRO_PI, data->fade_left);
+	right = right || CheckCollision(game, data, 223, 875, 138, data->time_left * 4 * ALLEGRO_PI * 24, data->fade_left / 10.0);
 
+	if (right && data->lastleft) {
+		data->score++;
+		data->lastleft = false;
+	} else if (left && !data->lastleft) {
+		data->score++;
+		data->lastleft = true;
+	}
 
 	if (data->backward_left || data->forward_left) {
 		data->fade_left += 0.025;
@@ -316,8 +355,10 @@ static void DrawScene(struct Game *game, struct GamestateResources* data, double
 				continue;
 			}
 		}
-		al_draw_rotated_bitmap(animals[i].animal->bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
-		                       atime*30 * 1920, 450, sin(time*6000)/5.0, (animals[i].toRight) ? 0 : ALLEGRO_FLIP_HORIZONTAL);
+		if ((atime > -0.1) && (atime < 1.1)) {
+			al_draw_rotated_bitmap(animals[i].animal->bitmap, al_get_bitmap_width(data->dzik.bitmap)/2, al_get_bitmap_height(data->dzik.bitmap)/2,
+			                       atime*30 * 1920, 450, sin(time*6000)/5.0, (animals[i].toRight) ? 0 : ALLEGRO_FLIP_HORIZONTAL);
+		}
 
 	}
 
@@ -463,6 +504,14 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	//	PrintConsole(game, "%f %f", x1, x2);
 
+	if (data->delay!=-1) {
+		float tint = sin(data->delay / 120.0 * ALLEGRO_PI);
+		if (data->delay > 60) {
+			tint = sqrt(tint);
+		}
+		float scale = sqrt(cos(data->delay / 120.0 * ALLEGRO_PI/2));
+		al_draw_tinted_scaled_rotated_bitmap(data->scorebmp, al_map_rgba_f(tint, tint, tint, tint), 1920/2, 1080/2, 1920/2, 1080/2 - 160 + 40*scale, 0.75 + scale/2.0, 0.75 + scale/2.0, 0, 0);
+	}
 
 	if (!data->started) {
 		char* text;
@@ -536,10 +585,10 @@ void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, 
 	}
 	if ((ev->type==ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_SPACE)) {
 		if (data->started) return;
-		data->dx = 12 * (((rand()%2) * 2) - 1);
 		al_rewind_audio_stream(data->music);
 		al_set_audio_stream_playing(data->music, true);
 
+		data->dx = 12 * (((rand()%2) * 2) - 1);
 		data->dy = 4;
 		data->ballx = 1920/2;
 		data->bally = 1080/2 - 100;
@@ -547,6 +596,7 @@ void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, 
 		data->leftscore = 0;
 		data->rightscore = 0;
 		data->scoreleft = (data->dx < 0);
+		data->lastleft = data->scoreleft;
 	}
 
 }
@@ -559,6 +609,8 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	data->small = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 53, 0);
 	progress(game); // report that we progressed with the loading, so the engine can draw a progress bar
 	data->big = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 200, 0);
+	progress(game);
+	data->scorefont = al_load_font(GetDataFilePath(game, "fonts/belligerent.ttf"), 400, 0);
 	progress(game);
 
 	data->yay1s = al_load_sample( GetDataFilePath(game, "sounds/yay1.flac") );
@@ -600,6 +652,7 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	progress(game);
 	data->target = CreateNotPreservedBitmap(1920/2, 1080/2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
+	data->scorebmp = al_create_bitmap(1920, 1080);
 
 	data->leaf.bitmap = al_load_bitmap(GetDataFilePath(game, "leaf.png"));
 	progress(game);
@@ -741,6 +794,9 @@ void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
 	data->leftscore = 0;
 	data->rightscore = 0;
 
+	data->score = 0;
+	data->delay = -1;
+
 	data->shader = al_create_shader(ALLEGRO_SHADER_GLSL);
 	PrintConsole(game, "VERTEX: %d", al_attach_shader_source_file(data->shader, ALLEGRO_VERTEX_SHADER, GetDataFilePath(game, "shaders/vertex.glsl")));
 	const char* log;
@@ -774,4 +830,7 @@ void Gamestate_Resume(struct Game *game, struct GamestateResources* data) {
 
 // Ignore this for now.
 // TODO: Check, comment, refine and/or remove:
-void Gamestate_Reload(struct Game *game, struct GamestateResources* data) {}
+void Gamestate_Reload(struct Game *game, struct GamestateResources* data) {
+	data->target = CreateNotPreservedBitmap(1920/2, 1080/2);
+	data->scene = CreateNotPreservedBitmap(1920, 1080);
+}
