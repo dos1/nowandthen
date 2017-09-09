@@ -76,8 +76,13 @@ struct GamestateResources {
 		bool scoreleft;
 		bool lastleft;
 
+		int shakeleft;
+		int shakeright;
+
 		int leftscore, rightscore;
 };
+
+static const int SCREENSHAKE = 20;
 
 int Gamestate_ProgressCount = 35; // number of loading steps as reported by Gamestate_Load
 
@@ -148,15 +153,23 @@ void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
 	if (data->delay >= 0) {
 		data->delay--;
 	}
+	if (data->shakeleft > 0) {
+		data->shakeleft--;
+	}
+	if (data->shakeright > 0) {
+		data->shakeright--;
+	}
 
 	if ((data->bally > (1080+42)) || (data->ballx < -42) || (data->ballx > (1920+42))) {
 		if (data->delay == -1) {
 			if (data->scoreleft) {
 				PrintConsole(game, "POINT FOR LEFT %d", data->score);
 				data->leftscore ++;
+				data->shakeright = SCREENSHAKE;
 			} else {
 				PrintConsole(game, "POINT FOR RIGHT %d", data->score);
 				data->rightscore ++;
+				data->shakeleft = SCREENSHAKE;
 			}
 			ALLEGRO_SAMPLE_INSTANCE *yays[3] = {data->yay1, data->yay2, data->yay3};
 			al_play_sample_instance(yays[rand() % 3]);
@@ -429,7 +442,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	al_set_target_backbuffer(game->display);
 
-	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 0, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 0, 0, 2, 2, 0, 0);
+	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 0, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, (data->shakeleft ? ((rand() % 20)-10) : 0), (data->shakeleft ? ((rand() % 20)-10) : 0), 2, 2, 0, 0);
 
 	// right
 
@@ -465,7 +478,7 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 
 	al_set_target_backbuffer(game->display);
 
-	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 1920/4, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 1920/2, 0, 2, 2, 0, 0);
+	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 1920/4, 0, 1920/4, 1080/2, al_map_rgb_f(1,1,1), 0, 0, 1920/2 + (data->shakeright ? ((rand() % 20)-10) : 0), (data->shakeright ? ((rand() % 20)-10) : 0), 2, 2, 0, 0);
 
 	//	al_draw_scaled_bitmap(data->target, 0, 0, 1920/2, 1080/2, 0, 0, 1920, 1080, 0);
 
@@ -652,7 +665,7 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	progress(game);
 	data->target = CreateNotPreservedBitmap(1920/2, 1080/2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
-	data->scorebmp = al_create_bitmap(1920, 1080);
+	data->scorebmp = CreateNotPreservedBitmap(1920, 1080);
 
 	data->leaf.bitmap = al_load_bitmap(GetDataFilePath(game, "leaf.png"));
 	progress(game);
@@ -820,6 +833,9 @@ void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
 	data->leftscore = 0;
 	data->rightscore = 0;
 
+	data->shakeleft = 0;
+	data->shakeright = 0;
+
 	data->score = 0;
 	data->delay = -1;
 
@@ -859,4 +875,5 @@ void Gamestate_Resume(struct Game *game, struct GamestateResources* data) {
 void Gamestate_Reload(struct Game *game, struct GamestateResources* data) {
 	data->target = CreateNotPreservedBitmap(1920/2, 1080/2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
+	data->scorebmp = CreateNotPreservedBitmap(1920, 1080);
 }
