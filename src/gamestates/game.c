@@ -746,9 +746,35 @@ void Gamestate_Unload(struct Game *game, struct GamestateResources* data) {
 	// Called when the gamestate library is being unloaded.
 	// Good place for freeing all allocated memory and resources.
 
+	al_destroy_font(data->big);
+	al_destroy_font(data->small);
+	al_destroy_font(data->scorefont);
+
 	al_destroy_bitmap(data->bg);
+	al_destroy_bitmap(data->bg2);
 	al_destroy_bitmap(data->frame);
 	al_destroy_bitmap(data->target);
+	al_destroy_bitmap(data->scene);
+	al_destroy_bitmap(data->bee1);
+	al_destroy_bitmap(data->bee2);
+	al_destroy_bitmap(data->bee3);
+	al_destroy_bitmap(data->clock1);
+	al_destroy_bitmap(data->clock2);
+	al_destroy_bitmap(data->clockball1);
+	al_destroy_bitmap(data->clockball2);
+	al_destroy_bitmap(data->hand1);
+	al_destroy_bitmap(data->hand2);
+	al_destroy_bitmap(data->ball);
+	al_destroy_bitmap(data->trees);
+	al_destroy_bitmap(data->scores);
+	al_destroy_bitmap(data->scorebmp);
+	al_destroy_bitmap(data->dzik.bitmap);
+	al_destroy_bitmap(data->ostronos.bitmap);
+	al_destroy_bitmap(data->owca.bitmap);
+	al_destroy_bitmap(data->leaf.bitmap);
+	al_destroy_bitmap(data->dzik.bitmap_sitting);
+	al_destroy_bitmap(data->ostronos.bitmap_sitting);
+	al_destroy_bitmap(data->owca.bitmap_sitting);
 
 	al_destroy_audio_stream(data->day1);
 	al_destroy_audio_stream(data->day2);
