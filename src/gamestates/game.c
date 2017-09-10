@@ -382,7 +382,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 	  {.time = 1, .toRight = false, .animal = &data->ostronos},
   };
 
-	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct Animal)); i++) {
+	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct AnimalOld)); i++) {
 		if (animals[i].benchAt) {
 			if ((time >= animals[i].benchAt - 0.001736) && (time <= animals[i].benchAt + animals[i].benchFor - 0.001736)) {
 				al_draw_bitmap(animals[i].animal->bitmap_sitting, (animals[i].time - animals[i].benchAt) * 30 * 1920, animals[i].animal->benchPos, animals[i].flipBench ? ALLEGRO_FLIP_HORIZONTAL : 0);
@@ -390,7 +390,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 		}
 	}
 
-	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct Animal)); i++) {
+	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct AnimalOld)); i++) {
 		float atime = (animals[i].toRight) ? (time - animals[i].time) : (animals[i].time - time);
 		if (animals[i].benchAt) {
 			if (time > animals[i].benchAt + animals[i].benchFor - 0.001736) {
