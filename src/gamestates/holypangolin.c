@@ -26,22 +26,22 @@
 #define SKIP_GAMESTATE NEXT_GAMESTATE
 
 struct GamestateResources {
-		ALLEGRO_BITMAP *bmp;
-		int counter;
-		ALLEGRO_AUDIO_STREAM *monkeys;
+	ALLEGRO_BITMAP* bmp;
+	int counter;
+	ALLEGRO_AUDIO_STREAM* monkeys;
 };
 
 int Gamestate_ProgressCount = 1;
 
-void Gamestate_Logic(struct Game *game, struct GamestateResources* data) {
+void Gamestate_Logic(struct Game* game, struct GamestateResources* data) {
 	data->counter++;
-	if (data->counter > 60*5.2) {
+	if (data->counter > 60 * 5.2) {
 		SwitchCurrentGamestate(game, NEXT_GAMESTATE);
 	}
 }
 
-void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
-	al_clear_to_color(al_map_rgb(255,255,255));
+void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
+	al_clear_to_color(al_map_rgb(255, 255, 255));
 	al_draw_scaled_bitmap(data->bmp, 0, 0, al_get_bitmap_width(data->bmp), al_get_bitmap_height(data->bmp), 0, 0, game->viewport.width, game->viewport.height, 0);
 
 	if (data->counter < 320) {
@@ -49,14 +49,14 @@ void Gamestate_Draw(struct Game *game, struct GamestateResources* data) {
 	}
 }
 
-void Gamestate_ProcessEvent(struct Game *game, struct GamestateResources* data, ALLEGRO_EVENT *ev) {
-	if (((ev->type==ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
+void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
+	if (((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
 		SwitchCurrentGamestate(game, SKIP_GAMESTATE);
 	}
 }
 
-void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
-	struct GamestateResources *data = malloc(sizeof(struct GamestateResources));
+void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
+	struct GamestateResources* data = malloc(sizeof(struct GamestateResources));
 	data->bmp = al_load_bitmap(GetDataFilePath(game, "holypangolin.png"));
 	progress(game); // report that we progressed with the loading, so the engine can draw a progress bar
 
@@ -68,21 +68,21 @@ void* Gamestate_Load(struct Game *game, void (*progress)(struct Game*)) {
 	return data;
 }
 
-void Gamestate_Unload(struct Game *game, struct GamestateResources* data) {
+void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->bmp);
 	al_destroy_audio_stream(data->monkeys);
 	free(data);
 }
 
-void Gamestate_Start(struct Game *game, struct GamestateResources* data) {
+void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->counter = 0;
 	al_set_audio_stream_playing(data->monkeys, true);
 }
 
-void Gamestate_Stop(struct Game *game, struct GamestateResources* data) {}
+void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}
 
-void Gamestate_Pause(struct Game *game, struct GamestateResources* data) {}
+void Gamestate_Pause(struct Game* game, struct GamestateResources* data) {}
 
-void Gamestate_Resume(struct Game *game, struct GamestateResources* data) {}
+void Gamestate_Resume(struct Game* game, struct GamestateResources* data) {}
 
-void Gamestate_Reload(struct Game *game, struct GamestateResources* data) {}
+void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {}

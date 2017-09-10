@@ -19,11 +19,11 @@
 #include <libsuperderpy.h>
 
 struct CommonResources {
-		// Fill in with common data accessible from all gamestates.
+	// Fill in with common data accessible from all gamestates.
 
-		bool unused; // to not malloc 0 bytes
+	bool unused; // to not malloc 0 bytes
 };
 
-struct CommonResources* CreateGameData(struct Game *game);
-void DestroyGameData(struct Game *game);
-bool GlobalEventHandler(struct Game *game, ALLEGRO_EVENT *ev);
+struct CommonResources* CreateGameData(struct Game* game);
+void DestroyGameData(struct Game* game);
+bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);
