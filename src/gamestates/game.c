@@ -266,19 +266,6 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data) {
 		al_set_audio_stream_playing(data->music, false);
 	}
 
-	if (data->time_left > 1) {
-		data->time_left -= 1;
-	}
-	if (data->time_right > 1) {
-		data->time_right -= 1;
-	}
-	if (data->time_left < 0) {
-		data->time_left += 1;
-	}
-	if (data->time_right < 0) {
-		data->time_right += 1;
-	}
-
 	double night = NightValue(data->time_left);
 	al_set_audio_stream_gain(data->day1, 1.0 - night);
 	al_set_audio_stream_gain(data->night1, night);
@@ -319,6 +306,19 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data) {
 
 	data->time_left += (1.0 / 24.0 / 60.0) * (data->lastbackward_left ? -data->fade_left : data->fade_left);
 	data->time_right += (1.0 / 24.0 / 60.0) * (data->lastbackward_right ? -data->fade_right : data->fade_right);
+
+	if (data->time_left > 1) {
+		data->time_left -= 1;
+	}
+	if (data->time_right > 1) {
+		data->time_right -= 1;
+	}
+	if (data->time_left < 0) {
+		data->time_left += 1;
+	}
+	if (data->time_right < 0) {
+		data->time_right += 1;
+	}
 
 	if (data->cooldown) {
 		data->cooldown--;
@@ -661,6 +661,12 @@ static void DGZ(struct Game* game, struct GamestateResources* data) { // Dynamic
 	PrintConsole(game, "DGZ: generated %d animals", data->animalsCount);
 }
 
+static void GuardedDraw(ALLEGRO_BITMAP* bitmap, float cx, float cy, float dx, float dy, float angle, int flags) {
+	if ((dx > 1920 * -0.5) || (dx < 1920 * 1.5) || (dy > 1080 * -0.5) || (dy < 1080 * 1.5)) {
+		al_draw_rotated_bitmap(bitmap, cx, cy, dx, dy, angle, flags);
+	}
+}
+
 static void DrawScene(struct Game* game, struct GamestateResources* data, double time) {
 	al_set_target_bitmap(data->scene);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
@@ -720,23 +726,23 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 	ALLEGRO_BITMAP* beeframes[4] = {data->bee1, data->bee2, data->bee3, data->bee2};
 	ALLEGRO_BITMAP* bee = beeframes[(int)(time * 20000) % 4];
 
-	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
+	GuardedDraw(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
 	  (time - 0.2) * 200 * 1920, 650, sin(time * 12000) / 6.0, 0);
 
-	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
+	GuardedDraw(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
 	  (time - 0.7) * 200 * 1920, 250, sin(time * 12000) / 6.0, 0);
 
-	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
+	GuardedDraw(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
 	  (time - 0.9) * 200 * 1920, 750, sin(time * 12000) / 6.0, 0);
 
-	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
-	  (0.3 - time) * 50 * 1920, (0.3 - time) * 50 * 1080, time * 1000, 0);
+	GuardedDraw(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
+	  (0.3 - time) * 50 * 1920, (0.3 - time) * 50 * 1080, time * 800, ALLEGRO_FLIP_VERTICAL);
 
-	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
-	  (time - 0.8) * 60 * 1920, (time - 0.8) * -40 * 1080, time * 1000, 0);
+	GuardedDraw(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
+	  (time - 0.8) * 120 * 1920 + 1920 / 2, (time - 0.8) * -80 * 1080 + 1080 / 2, time * 1000, ALLEGRO_FLIP_HORIZONTAL);
 
-	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
-	  (time - 0.4) * 70 * 1920, (time - 0.4) * 80 * 1080, time * 1000, 0);
+	GuardedDraw(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
+	  (time - 0.4) * 70 * 1920, (time - 0.4) * 80 * 1080, time * 1200, 0);
 
 	al_draw_textf(game->_priv.font_console, al_map_rgb(0, 0, 0), 10, 1030, ALLEGRO_ALIGN_LEFT, "%f (%d)", time, tick);
 	al_draw_textf(game->_priv.font_console, al_map_rgb(0, 0, 0), 1910, 1030, ALLEGRO_ALIGN_RIGHT, "(%d) %f", tick, time);
