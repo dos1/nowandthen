@@ -35,23 +35,25 @@ enum ANIMAL_STATE {
 };
 
 struct Path {
-	float a, b;
-	float start, stop;
+	double a, b;
+	double start, stop;
 	bool behind;
 	bool bench;
-	int successorsLeft;
-	int successorsRight;
+	int zIndex;
+	unsigned int successorsLeft;
+	unsigned int successorsRight;
 	struct Path* successors[];
 };
 
 struct Animal {
 	struct {
-		float spawn, despawn;
+		int spawn, despawn;
 	} time;
 	enum ANIMAL_STATE state;
 	bool reverse;
 	struct Path* path;
 	struct AnimalRes* type;
+	double speed;
 };
 
 struct AnimalOld {
@@ -108,16 +110,39 @@ struct GamestateResources {
 
 	int leftscore, rightscore;
 
-	struct Animal animals[1440];
-	int animalsCount;
+	struct Animal* animals;
+	unsigned int animalsCount;
+	unsigned int animalsAllocated;
+
+	struct Path* paths[16];
 };
 
-static const int SCREENSHAKE = 20;
+// "tick" is the smallest unit of operation
+// (one minute in-game, one second in real life)
+#define TICKS_PER_DAY (24 * 60)
+#define AVG_TICKS_PER_ANIMAL 16
+#define AVG_BENCHING_TIME 32
+#define MIN_BENCHING_TIME 5
+#define AT_NIGHT_SUPPRESSION 0.5
+#define SCREENSHAKE 20
 
 int Gamestate_ProgressCount = 35; // number of loading steps as reported by Gamestate_Load
 
 static bool IsBetween(float val, float lim1, float lim2) {
 	return ((val >= lim1) && (val <= lim2)) || ((val >= lim2) && (val <= lim1));
+}
+
+static double NightValue(double time) {
+	double night = 0;
+	if ((time > 0.25) && (time < 0.5)) {
+		night = (time - 0.25) * 4;
+		if (night < 0.5) {
+			night = fmin(night * 5, 1.0);
+		} else {
+			night = 1.0 - fmax((night - 0.5) * 2, 0.0);
+		}
+	}
+	return night;
 }
 
 static bool CheckCollision(struct Game* game, struct GamestateResources* data, int Px, int Py, int Pw, double angle, double speed) {
@@ -254,6 +279,18 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data) {
 		data->time_right += 1;
 	}
 
+	double night = NightValue(data->time_left);
+	al_set_audio_stream_gain(data->day1, 1.0 - night);
+	al_set_audio_stream_gain(data->night1, night);
+	al_set_audio_stream_speed(data->day1, 1.0 + data->fade_left);
+	al_set_audio_stream_speed(data->night1, 1.0 + data->fade_left);
+
+	night = NightValue(data->time_right);
+	al_set_audio_stream_gain(data->day2, 1.0 - night);
+	al_set_audio_stream_gain(data->night2, night);
+	al_set_audio_stream_speed(data->day2, 1.0 + data->fade_right);
+	al_set_audio_stream_speed(data->night2, 1.0 + data->fade_right);
+
 	if (data->started) {
 		data->ballx += data->dx;
 		data->bally += data->dy;
@@ -328,87 +365,360 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
-static void DrawScene(struct Game* game, struct GamestateResources* data, double time, double speed, ALLEGRO_AUDIO_STREAM* daystream, ALLEGRO_AUDIO_STREAM* nightstream) {
+static struct Path* InitPath(int x1, int y1, int x2, int y2, int successorsLeft, int successorsRight) {
+	struct Path* path = calloc(1, sizeof(struct Path) + sizeof(struct Path*) * (successorsLeft + successorsRight));
+	path->a = (y2 - y1) / (float)(x2 - x1);
+	path->b = y1 - path->a * x1;
+	path->start = x1;
+	path->stop = x2;
+	path->behind = false;
+	path->bench = false;
+	path->successorsLeft = successorsLeft;
+	path->successorsRight = successorsRight;
+	return path;
+}
+
+static struct Animal* SpawnAnimal(struct Game* game, struct GamestateResources* data, int tick, struct Path* path, struct AnimalRes* type, bool reverse, double speed) {
+	struct Animal* animal = &data->animals[data->animalsCount]; //malloc(sizeof(struct Animal));
+	animal->time.spawn = tick;
+	double x1 = path->start;
+	double x2 = path->stop;
+	double y1 = path->a * x1 + path->b;
+	double y2 = path->a * x2 + path->b;
+	double length = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+	animal->speed = speed;
+	animal->time.despawn = tick + (length / (38.8) * animal->speed);
+	if (path->bench) {
+		animal->time.despawn++;
+	}
+	animal->state = ANIMAL_WALKING;
+	animal->type = type;
+	animal->path = path;
+	animal->reverse = reverse;
+
+	data->animalsCount++;
+	if (data->animalsCount == data->animalsAllocated) {
+		data->animalsAllocated *= 2;
+		PrintConsole(game, "Reallocating animals table to %d", data->animalsAllocated);
+		data->animals = realloc(data->animals, data->animalsAllocated * sizeof(struct Animal));
+	}
+
+	return animal;
+}
+
+static void CreatePaths(struct Game* game, struct GamestateResources* data) {
+	data->paths[0] = InitPath(1545, 269, 1643, 342, 1, 0);
+	data->paths[1] = InitPath(28, 561, 686, 487, 0, 3);
+	data->paths[2] = InitPath(686, 487, 1194, 493, 3, 2);
+	data->paths[3] = InitPath(1194, 493, 1195, 493, 2, 2);
+	data->paths[4] = InitPath(1195, 493, 1414, 494, 2, 3);
+	data->paths[5] = InitPath(1414, 494, 1900, 432, 3, 0);
+	data->paths[6] = InitPath(393, 1027, 615, 738, 0, 1);
+	data->paths[7] = InitPath(615, 738, 840, 622, 1, 2);
+	data->paths[8] = InitPath(1185, 807, 1603, 999, 3, 0);
+	data->paths[9] = InitPath(840, 622, 1185, 807, 2, 3);
+	data->paths[10] = InitPath(686, 487, 840, 622, 3, 2);
+	data->paths[11] = InitPath(329, 195, 686, 487, 1, 3);
+	data->paths[12] = InitPath(260, 262, 329, 195, 0, 1);
+	data->paths[13] = InitPath(951, 1025, 1185, 807, 0, 3);
+	data->paths[14] = InitPath(1185, 807, 1414, 494, 3, 3);
+	data->paths[15] = InitPath(1414, 494, 1545, 269, 3, 1);
+
+	data->paths[3]->bench = true;
+	data->paths[12]->behind = true;
+	data->paths[0]->behind = true;
+
+	// path 0 left
+	data->paths[0]->successors[0] = data->paths[15];
+	// no right on path 0
+
+	// no left on path 1
+	// path 1 right
+	data->paths[1]->successors[0] = data->paths[11];
+	data->paths[1]->successors[1] = data->paths[2];
+	data->paths[1]->successors[2] = data->paths[10];
+
+	// path 2 left
+	data->paths[2]->successors[0] = data->paths[1];
+	data->paths[2]->successors[1] = data->paths[11];
+	data->paths[2]->successors[2] = data->paths[10];
+	// path 2 right
+	data->paths[2]->successors[3] = data->paths[3];
+	data->paths[2]->successors[4] = data->paths[4];
+
+	// path 3 left
+	data->paths[3]->successors[0] = data->paths[2];
+	data->paths[3]->successors[1] = data->paths[4];
+	// path 3 right
+	data->paths[3]->successors[2] = data->paths[2];
+	data->paths[3]->successors[3] = data->paths[4];
+
+	// path 4 left
+	data->paths[4]->successors[0] = data->paths[2];
+	data->paths[4]->successors[1] = data->paths[3];
+	// path 4 right
+	data->paths[4]->successors[2] = data->paths[14];
+	data->paths[4]->successors[3] = data->paths[15];
+	data->paths[4]->successors[4] = data->paths[5];
+
+	// path 5 left
+	data->paths[5]->successors[0] = data->paths[4];
+	data->paths[5]->successors[1] = data->paths[14];
+	data->paths[5]->successors[2] = data->paths[15];
+	// no right on path 5
+
+	// no left on path 6
+	// path 6 right
+	data->paths[6]->successors[0] = data->paths[7];
+
+	// path 7 left
+	data->paths[7]->successors[0] = data->paths[6];
+	// path 7 right
+	data->paths[7]->successors[1] = data->paths[9];
+	data->paths[7]->successors[2] = data->paths[10];
+
+	// path 8 left
+	data->paths[8]->successors[0] = data->paths[9];
+	data->paths[8]->successors[1] = data->paths[13];
+	data->paths[8]->successors[2] = data->paths[14];
+	// no right on path 8
+
+	// path 9 left
+	data->paths[9]->successors[0] = data->paths[7];
+	data->paths[9]->successors[1] = data->paths[10];
+	// path 9 right
+	data->paths[9]->successors[2] = data->paths[8];
+	data->paths[9]->successors[3] = data->paths[13];
+	data->paths[9]->successors[4] = data->paths[14];
+
+	// path 10 left
+	data->paths[10]->successors[0] = data->paths[1];
+	data->paths[10]->successors[1] = data->paths[11];
+	data->paths[10]->successors[2] = data->paths[2];
+	// path 10 right
+	data->paths[10]->successors[3] = data->paths[7];
+	data->paths[10]->successors[4] = data->paths[9];
+
+	// path 11 left
+	data->paths[11]->successors[0] = data->paths[12];
+	// path 11 right
+	data->paths[11]->successors[1] = data->paths[1];
+	data->paths[11]->successors[2] = data->paths[2];
+	data->paths[11]->successors[3] = data->paths[10];
+
+	// no left on path 12
+	// path 12 right
+	data->paths[12]->successors[0] = data->paths[11];
+
+	// no left on path 13
+	// path 13 right
+	data->paths[13]->successors[0] = data->paths[9];
+	data->paths[13]->successors[1] = data->paths[14];
+	data->paths[13]->successors[2] = data->paths[8];
+
+	// path 14 left
+	data->paths[14]->successors[0] = data->paths[9];
+	data->paths[14]->successors[1] = data->paths[13];
+	data->paths[14]->successors[2] = data->paths[8];
+	// path 14 right
+	data->paths[14]->successors[3] = data->paths[4];
+	data->paths[14]->successors[4] = data->paths[15];
+	data->paths[14]->successors[5] = data->paths[5];
+
+	// path 15 left
+	data->paths[15]->successors[0] = data->paths[4];
+	data->paths[15]->successors[1] = data->paths[14];
+	data->paths[15]->successors[2] = data->paths[5];
+	// path 15 right
+	data->paths[15]->successors[3] = data->paths[0];
+}
+
+static void DGZ(struct Game* game, struct GamestateResources* data) { // Dynamiczny Generator Zwierzątek™
+
+	struct Path* entrances[] = {
+		data->paths[1],
+		data->paths[12],
+		data->paths[6],
+		data->paths[13],
+		data->paths[8],
+		data->paths[0],
+		data->paths[5],
+	};
+
+	struct AnimalRes* animalTypes[] = {&data->owca, &data->ostronos, &data->dzik};
+
+	data->animalsAllocated = 512;
+	data->animalsCount = 0;
+	data->animals = calloc(data->animalsAllocated, sizeof(struct Animal));
+
+	int tick = 0;
+	bool animalsLeft = false;
+	while ((tick < TICKS_PER_DAY) || (animalsLeft)) {
+		double night = NightValue(tick / (double)TICKS_PER_DAY);
+		double probability = (1 / (float)AVG_TICKS_PER_ANIMAL) * (1 - AT_NIGHT_SUPPRESSION * night);
+		animalsLeft = false;
+
+		if (((rand() / (float)RAND_MAX) <= probability) && (tick < TICKS_PER_DAY)) {
+			// spawn an animal on entrance
+			struct Path* path = entrances[rand() % (sizeof entrances / sizeof entrances[0])];
+			SpawnAnimal(game, data, tick, path, animalTypes[rand() % (sizeof animalTypes / sizeof animalTypes[0])], path->successorsLeft ? true : false, 0.8 + (rand() / (float)RAND_MAX) * 0.4);
+		}
+
+		bool benchLeftTaken = false;
+		bool benchRightTaken = false;
+
+		for (unsigned int i = 0; i < data->animalsCount; i++) {
+			struct Animal* animal = &data->animals[i];
+			if ((animal->time.spawn <= tick) && (animal->time.despawn >= tick)) {
+				animalsLeft = true;
+				switch (animal->state) {
+					case ANIMAL_BENCH_CENTER:
+						benchLeftTaken = true;
+						benchRightTaken = true;
+						break;
+					case ANIMAL_BENCH_LEFT:
+						benchLeftTaken = true;
+						break;
+					case ANIMAL_BENCH_RIGHT:
+						benchRightTaken = true;
+						break;
+					case ANIMAL_WALKING:
+						break;
+				}
+			}
+		}
+
+		for (unsigned int i = 0; i < data->animalsCount; i++) {
+			struct Animal* animal = &data->animals[i];
+			if ((animal->time.spawn <= tick) && (animal->time.despawn >= tick)) {
+				if (animal->state != ANIMAL_WALKING) {
+					animal->time.despawn = tick + 1;
+					if ((animal->time.spawn + MIN_BENCHING_TIME) <= tick) {
+						if ((rand() / (double)RAND_MAX) <= (1 / (double)AVG_BENCHING_TIME)) {
+							animal->time.despawn = tick;
+						}
+					}
+				}
+			}
+			if (animal->time.despawn == tick) {
+				int pathsNr = animal->reverse ? animal->path->successorsLeft : animal->path->successorsRight;
+				int startNr = animal->reverse ? 0 : animal->path->successorsLeft;
+				if (pathsNr) {
+					struct Path* newpath = animal->path->successors[startNr + (rand() % pathsNr)];
+					enum ANIMAL_STATE newstate = ANIMAL_WALKING;
+
+					if (newpath->bench) {
+						// it's a bench!
+						if (benchLeftTaken && benchRightTaken) {
+							// both sits are taken though, no luck :(
+							while (newpath->bench) {
+								newpath = animal->path->successors[startNr + (rand() % pathsNr)];
+							}
+						} else {
+							// the bench has free sit!
+							bool desiredLeft = rand() / (double)RAND_MAX < 0.5;
+							if (desiredLeft && benchLeftTaken) {
+								desiredLeft = false;
+							}
+							if (!desiredLeft && benchRightTaken) {
+								desiredLeft = true;
+							}
+							newstate = desiredLeft ? ANIMAL_BENCH_LEFT : ANIMAL_BENCH_RIGHT;
+							if (!benchLeftTaken && !benchRightTaken) {
+								if (rand() / (double)RAND_MAX < 0.1) {
+									// let's take the whole bench for myself, hah!
+									newstate = ANIMAL_BENCH_CENTER;
+									benchLeftTaken = true;
+									benchRightTaken = true;
+								}
+							}
+							if (desiredLeft) {
+								benchLeftTaken = true;
+							} else {
+								benchRightTaken = true;
+							}
+						}
+					}
+
+					// check if we're arriving at beginning or ending of newpath
+					bool left = false;
+					for (unsigned int j = 0; j < newpath->successorsLeft; j++) {
+						// either we find the old path as left successor to the new one (so we arrive at it's beginning)
+						// or not (so we arrive at its end)
+						if (newpath->successors[j] == animal->path) {
+							left = true;
+							break;
+						}
+					}
+					struct Animal* newanimal = SpawnAnimal(game, data, tick, newpath, data->animals[i].type, !left, data->animals[i].speed);
+					newanimal->state = newstate;
+				}
+			}
+		}
+		tick++;
+	}
+
+	PrintConsole(game, "DGZ: generated %d animals", data->animalsCount);
+}
+
+static void DrawScene(struct Game* game, struct GamestateResources* data, double time) {
 	al_set_target_bitmap(data->scene);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
-	float night = 0;
-	if ((time > 0.25) && (time < 0.5)) {
-		night = (time - 0.25) * 4;
-		if (night < 0.5) {
-			night = fmin(night * 5, 1.0);
-		} else {
-			night = 1.0 - fmax((night - 0.5) * 2, 0.0);
-		}
-		//fmin(fmin(night*5, 1.0), fmax(1.0-(night*5), 0));
-	}
-
-	al_set_audio_stream_gain(daystream, 1.0 - night);
-	al_set_audio_stream_gain(nightstream, night);
-	al_set_audio_stream_speed(daystream, 1.0 + speed);
-	al_set_audio_stream_speed(nightstream, 1.0 + speed);
+	double night = NightValue(time);
 
 	//	PrintConsole(game, "time=%f, night=%f", time, night);
 	al_draw_tinted_bitmap(data->bg2, al_map_rgba_f(night, night, night, night), 0, 0, 0);
 
-	struct AnimalOld animals[] = {
-	  {.time = 0, .toRight = true, .animal = &data->dzik},
-	  {.time = 0, .toRight = false, .animal = &data->dzik},
-	  {.time = 0.05, .toRight = false, .animal = &data->ostronos},
-	  {.time = 0.05, .toRight = true, .animal = &data->owca},
-	  {.time = 0.1, .toRight = false, .animal = &data->owca},
-	  {.time = 0.1, .toRight = true, .animal = &data->owca},
-	  {.time = 0.14, .toRight = false, .animal = &data->ostronos},
-	  {.time = 0.15, .toRight = true, .animal = &data->owca},
-	  {.time = 0.2, .toRight = false, .animal = &data->ostronos},
-	  {.time = 0.22, .toRight = false, .animal = &data->dzik},
-	  {.time = 0.2, .toRight = true, .animal = &data->owca},
-	  {.time = 0.5, .toRight = false, .animal = &data->ostronos},
-	  {.time = 0.55, .toRight = true, .animal = &data->dzik},
-	  {.time = 0.6, .toRight = false, .animal = &data->dzik},
-	  {.time = 0.666, .toRight = false, .animal = &data->ostronos},
-	  {.time = 0.75, .toRight = false, .animal = &data->dzik},
-	  {.time = 0.7, .toRight = true, .animal = &data->ostronos},
-	  {.time = 0.78, .toRight = false, .animal = &data->dzik, .benchAt = 0.759 + 0.001736, .benchFor = 0.8 - 0.759, .flipBench = false, .afterBench = 0.82},
-	  {.time = 0.79, .toRight = false, .animal = &data->owca},
-	  {.time = 0.8, .toRight = true, .animal = &data->dzik},
-	  {.time = 0.8, .toRight = false, .animal = &data->ostronos, .benchAt = 0.779, .benchFor = 0.82 - 0.779, .flipBench = true, .afterBench = 0.84},
-	  {.time = 0.87, .toRight = false, .animal = &data->owca},
-	  {.time = 0.9, .toRight = true, .animal = &data->dzik},
-	  {.time = 0.88, .toRight = false, .animal = &data->owca, .benchAt = 0.859 + 0.001736, .benchFor = 0.9 - 0.859, .flipBench = false, .afterBench = 0.92},
-	  {.time = 0.95, .toRight = true, .animal = &data->owca},
-	  {.time = 0.96, .toRight = true, .animal = &data->ostronos},
-	  {.time = 1, .toRight = false, .animal = &data->ostronos},
-  };
+	int tick = time * TICKS_PER_DAY;
 
-	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct AnimalOld)); i++) {
-		if (animals[i].benchAt) {
-			if ((time >= animals[i].benchAt - 0.001736) && (time <= animals[i].benchAt + animals[i].benchFor - 0.001736)) {
-				al_draw_bitmap(animals[i].animal->bitmap_sitting, (animals[i].time - animals[i].benchAt) * 30 * 1920, animals[i].animal->benchPos, animals[i].flipBench ? ALLEGRO_FLIP_HORIZONTAL : 0);
+	//	PrintConsole(game, "clock is ticking: %f = %d; animals %d", time, tick, data->animalsCount);
+	for (unsigned int i = 0; i < data->animalsCount; i++) {
+		//		PrintConsole(game, "animal %d exists from tick %d to %d", i, data->animals[i]->time.spawn, data->animals[i]->time.despawn);
+		for (int retick = 0; retick < 2; retick++) {
+			if (retick) {
+				time += 1;
+				tick += TICKS_PER_DAY; // wrapping
 			}
-		}
-	}
+			if ((data->animals[i].time.spawn <= tick) && (data->animals[i].time.despawn > tick)) {
+				//PrintConsole(game, "got it");
+				double progress = ((time * TICKS_PER_DAY) - data->animals[i].time.spawn) / (double)(data->animals[i].time.despawn - data->animals[i].time.spawn);
+				struct Path* path = data->animals[i].path;
+				double x;
+				if (!data->animals[i].reverse) {
+					x = path->start + (path->stop - path->start) * progress;
+				} else {
+					x = path->stop - (path->stop - path->start) * progress;
+				}
+				double y = path->a * x + path->b;
 
-	for (unsigned int i = 0; i < (sizeof(animals) / sizeof(struct AnimalOld)); i++) {
-		float atime = (animals[i].toRight) ? (time - animals[i].time) : (animals[i].time - time);
-		if (animals[i].benchAt) {
-			if (time > animals[i].benchAt + animals[i].benchFor - 0.001736) {
-				atime = (animals[i].toRight) ? (time - animals[i].afterBench) : (animals[i].afterBench - time);
-			} else if (time >= animals[i].benchAt - 0.001736) {
-				continue;
+				if (data->animals[i].state == ANIMAL_WALKING) {
+					al_draw_rotated_bitmap(data->animals[i].type->bitmap,
+					  al_get_bitmap_width(data->animals[i].type->bitmap) / 2, al_get_bitmap_height(data->animals[i].type->bitmap) / 2,
+					  x, y, atan(path->a) + (sin(time * 6000 + i) / 5.0), data->animals[i].reverse ? ALLEGRO_FLIP_HORIZONTAL : 0);
+				} else {
+					int offset = 85;
+					if (data->animals[i].state == ANIMAL_BENCH_CENTER) {
+						offset = 40;
+					} else if (data->animals[i].state == ANIMAL_BENCH_RIGHT) {
+						offset = -5;
+					}
+					al_draw_bitmap(data->animals[i].type->bitmap_sitting,
+					  x - offset, data->animals[i].type->benchPos, (data->animals[i].state == ANIMAL_BENCH_RIGHT) ? ALLEGRO_FLIP_HORIZONTAL : 0);
+				}
 			}
-		}
-		if ((atime > -0.1) && (atime < 1.1)) {
-			al_draw_rotated_bitmap(animals[i].animal->bitmap, al_get_bitmap_width(data->dzik.bitmap) / 2, al_get_bitmap_height(data->dzik.bitmap) / 2,
-			  atime * 30 * 1920, 450, sin(time * 6000) / 5.0, (animals[i].toRight) ? 0 : ALLEGRO_FLIP_HORIZONTAL);
+			if (retick) {
+				time -= 1;
+				tick -= TICKS_PER_DAY; // wrapping
+			}
 		}
 	}
 
 	al_draw_bitmap(data->trees, 0, 0, 0);
 
-	ALLEGRO_BITMAP* beeframes[3] = {data->bee1, data->bee2, data->bee3};
-	ALLEGRO_BITMAP* bee = beeframes[(data->counter / 5) % 3];
+	ALLEGRO_BITMAP* beeframes[4] = {data->bee1, data->bee2, data->bee3, data->bee2};
+	ALLEGRO_BITMAP* bee = beeframes[(int)(time * 20000) % 4];
 
 	al_draw_rotated_bitmap(bee, al_get_bitmap_width(data->bee1) / 2, al_get_bitmap_height(data->bee1) / 2,
 	  (time - 0.2) * 200 * 1920, 650, sin(time * 12000) / 6.0, 0);
@@ -423,9 +733,13 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 	  (0.3 - time) * 50 * 1920, (0.3 - time) * 50 * 1080, time * 1000, 0);
 
 	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
+	  (time - 0.8) * 60 * 1920, (time - 0.8) * -40 * 1080, time * 1000, 0);
+
+	al_draw_rotated_bitmap(data->leaf.bitmap, al_get_bitmap_width(data->leaf.bitmap) / 2, al_get_bitmap_height(data->leaf.bitmap) / 2,
 	  (time - 0.4) * 70 * 1920, (time - 0.4) * 80 * 1080, time * 1000, 0);
 
-	//al_draw_textf(game->_priv.font_console, al_map_rgb(255,255,255), 250, 150, ALLEGRO_ALIGN_LEFT, "%f", time);
+	al_draw_textf(game->_priv.font_console, al_map_rgb(0, 0, 0), 10, 1030, ALLEGRO_ALIGN_LEFT, "%f (%d)", time, tick);
+	al_draw_textf(game->_priv.font_console, al_map_rgb(0, 0, 0), 1910, 1030, ALLEGRO_ALIGN_RIGHT, "(%d) %f", tick, time);
 
 	al_draw_filled_rectangle(0, 0, 1920, 1080, al_map_rgba_f(0, 0, 0, night * 0.333));
 }
@@ -434,7 +748,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
 
-	DrawScene(game, data, data->time_left, data->fade_left, data->day1, data->night1);
+	DrawScene(game, data, data->time_left);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
@@ -473,7 +787,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	// right
 
-	DrawScene(game, data, data->time_right, data->fade_right, data->day2, data->night2);
+	DrawScene(game, data, data->time_right);
 
 	al_set_target_bitmap(data->target);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
@@ -506,7 +820,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_draw_tinted_scaled_rotated_bitmap_region(data->target, 1920 / 4, 0, 1920 / 4, 1080 / 2, al_map_rgb_f(1, 1, 1), 0, 0, 1920 / 2 + (data->shakeright ? ((rand() % 20) - 10) : 0), (data->shakeright ? ((rand() % 20) - 10) : 0), 2, 2, 0, 0);
 
-	//	al_draw_scaled_bitmap(data->target, 0, 0, 1920/2, 1080/2, 0, 0, 1920, 1080, 0);
+	//al_draw_scaled_bitmap(data->target, 0, 0, 1920 / 2, 1080 / 2, 0, 0, 1920, 1080, 0); // debug
 
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
@@ -703,8 +1017,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 	data->dzik.bitmap_sitting = al_load_bitmap(GetDataFilePath(game, "animals/dzik1.png"));
 	progress(game);
-	data->dzik.benchPos = 300;
-	data->owca.benchPos = 300;
+	data->dzik.benchPos = 310;
+	data->owca.benchPos = 310;
 	data->ostronos.benchPos = 350;
 
 	data->bee1 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka1.png"));
@@ -771,6 +1085,9 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->scores = al_load_bitmap(GetDataFilePath(game, "scores.png"));
 	progress(game);
 
+	CreatePaths(game, data);
+	DGZ(game, data);
+
 	return data;
 }
 
@@ -823,6 +1140,12 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_sample(data->yay2s);
 	al_destroy_sample(data->yay3s);
 	al_destroy_sample(data->balls);
+
+	free(data->animals);
+	for (unsigned int i = 0; i < (sizeof(data->paths) / sizeof(struct Path*)); i++) {
+		free(data->paths[i]);
+	}
+
 	free(data);
 }
 
@@ -872,6 +1195,10 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	if ((log = al_get_shader_log(data->shader)) && (log[0])) {
 		PrintConsole(game, "%s", log);
 	}
+
+	al_set_target_bitmap(data->scorebmp);
+	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+	al_set_target_backbuffer(game->display);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

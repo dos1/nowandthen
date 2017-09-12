@@ -112,5 +112,6 @@ void main()	{
 	}
 
 	c.rgb *= c.a;
+	c.a = 1.0;
 	gl_FragColor = c;
 }
