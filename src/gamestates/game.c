@@ -73,7 +73,7 @@ struct GamestateResources {
 
 	ALLEGRO_FONT *big, *small, *scorefont;
 	ALLEGRO_SHADER* shader;
-	ALLEGRO_BITMAP *bg, *bg2, *fg, *fg2, *target, *frame, *scene, *bee1, *bee2, *bee3, *title;
+	ALLEGRO_BITMAP *bg, *bg2, *fg, *fg2, *target, *frame, *scene, *bee1, *bee2, *bee3, *title, *key1, *key2, *arrow1, *arrow2;
 
 	ALLEGRO_SAMPLE *yay1s, *yay2s, *yay3s, *balls;
 	ALLEGRO_SAMPLE_INSTANCE *yay1, *yay2, *yay3, *ballsound;
@@ -90,6 +90,8 @@ struct GamestateResources {
 	bool lastbackward_left, lastbackward_right;
 
 	double time_left, time_right;
+
+	bool left_buttons, right_buttons;
 
 	float dx, dy;
 
@@ -129,7 +131,7 @@ struct GamestateResources {
 #define AT_NIGHT_SUPPRESSION 0.5
 #define SCREENSHAKE 20
 
-int Gamestate_ProgressCount = 40; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 42; // number of loading steps as reported by Gamestate_Load
 
 static bool IsBetween(float val, float lim1, float lim2) {
 	return ((val >= lim1) && (val <= lim2)) || ((val >= lim2) && (val <= lim1));
@@ -965,6 +967,19 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_text(data->small, al_map_rgb(0, 0, 0), 1920 / 2 - 0, 860 + 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
 		al_draw_text(data->small, al_map_rgb(255, 255, 255), 1920 / 2, 860, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
 	}
+
+	if (data->left_buttons) {
+		al_draw_scaled_rotated_bitmap(data->key2, 0, 0, 20, 990, 0.25, 0.25, 0, 0);
+		al_draw_text(data->small, al_map_rgb(0, 0, 0), 20 + 25, 990 + 15, ALLEGRO_ALIGN_LEFT, "A");
+		al_draw_scaled_rotated_bitmap(data->key1, 0, 0, 360, 990, 0.25, 0.25, 0, 0);
+		al_draw_text(data->small, al_map_rgb(0, 0, 0), 360 + 20, 990 + 15, ALLEGRO_ALIGN_LEFT, "D");
+	}
+	if (data->right_buttons) {
+		al_draw_scaled_rotated_bitmap(data->key2, 0, 0, 1920 - 360 - 156 / 2, 990, 0.25, 0.25, 0, 0);
+		al_draw_scaled_rotated_bitmap(data->arrow1, 0, 0, 1920 - 360 - 156 / 2 + 25, 990 + 25, 0.25, 0.25, 0, 0);
+		al_draw_scaled_rotated_bitmap(data->key1, 0, 0, 1920 - 20 - 156 / 2, 990, 0.25, 0.25, 0, 0);
+		al_draw_scaled_rotated_bitmap(data->arrow2, 0, 0, 1920 - 20 - 156 / 2 + 15, 990 + 25, 0.25, 0.25, 0, 0);
+	}
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
@@ -978,6 +993,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_RIGHT)) {
 		data->forward_right = true;
 		data->lastbackward_right = false;
+		data->right_buttons = false;
 	}
 	if ((ev->type == ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_RIGHT)) {
 		data->forward_right = false;
@@ -985,6 +1001,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_LEFT)) {
 		data->backward_right = true;
 		data->lastbackward_right = true;
+		data->right_buttons = false;
 	}
 	if ((ev->type == ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_LEFT)) {
 		data->backward_right = false;
@@ -993,6 +1010,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_D)) {
 		data->forward_left = true;
 		data->lastbackward_left = false;
+		data->left_buttons = false;
 	}
 	if ((ev->type == ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_D)) {
 		data->forward_left = false;
@@ -1000,6 +1018,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_A)) {
 		data->backward_left = true;
 		data->lastbackward_left = true;
+		data->left_buttons = false;
 	}
 	if ((ev->type == ALLEGRO_EVENT_KEY_UP) && (ev->keyboard.keycode == ALLEGRO_KEY_A)) {
 		data->backward_left = false;
@@ -1076,6 +1095,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->trees = al_load_bitmap(GetDataFilePath(game, "trees.png"));
 	progress(game);
 	data->tree = al_load_bitmap(GetDataFilePath(game, "tree.png"));
+	progress(game);
+	data->key1 = al_load_bitmap(GetDataFilePath(game, "klawisz_lewy.png"));
+	data->key2 = al_load_bitmap(GetDataFilePath(game, "klawisz_prawy.png"));
+	progress(game);
+	data->arrow1 = al_load_bitmap(GetDataFilePath(game, "strzalka_lewo.png"));
+	data->arrow2 = al_load_bitmap(GetDataFilePath(game, "strzalka_prawo.png"));
 	progress(game);
 	data->target = CreateNotPreservedBitmap(1920 / 2, 1080 / 2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
@@ -1188,12 +1213,19 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->bg2);
+	al_destroy_bitmap(data->fg);
+	al_destroy_bitmap(data->fg2);
 	al_destroy_bitmap(data->frame);
 	al_destroy_bitmap(data->target);
 	al_destroy_bitmap(data->scene);
 	al_destroy_bitmap(data->bee1);
 	al_destroy_bitmap(data->bee2);
 	al_destroy_bitmap(data->bee3);
+	al_destroy_bitmap(data->title);
+	al_destroy_bitmap(data->key1);
+	al_destroy_bitmap(data->key2);
+	al_destroy_bitmap(data->arrow1);
+	al_destroy_bitmap(data->arrow2);
 	al_destroy_bitmap(data->clock1);
 	al_destroy_bitmap(data->clock2);
 	al_destroy_bitmap(data->clockball1);
@@ -1202,6 +1234,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->hand2);
 	al_destroy_bitmap(data->ball);
 	al_destroy_bitmap(data->trees);
+	al_destroy_bitmap(data->tree);
 	al_destroy_bitmap(data->scores);
 	al_destroy_bitmap(data->scorebmp);
 	al_destroy_bitmap(data->dzik.bitmap);
@@ -1253,6 +1286,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->lastbackward_left = false;
 	data->lastbackward_right = false;
 	data->ballrot = 0;
+
+	data->left_buttons = true;
+	data->right_buttons = true;
 
 	data->started = false;
 	data->dx = 0;
