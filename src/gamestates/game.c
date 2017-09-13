@@ -73,7 +73,7 @@ struct GamestateResources {
 
 	ALLEGRO_FONT *big, *small, *scorefont;
 	ALLEGRO_SHADER* shader;
-	ALLEGRO_BITMAP *bg, *bg2, *fg, *fg2, *target, *frame, *scene, *bee1, *bee2, *bee3;
+	ALLEGRO_BITMAP *bg, *bg2, *fg, *fg2, *target, *frame, *scene, *bee1, *bee2, *bee3, *title;
 
 	ALLEGRO_SAMPLE *yay1s, *yay2s, *yay3s, *balls;
 	ALLEGRO_SAMPLE_INSTANCE *yay1, *yay2, *yay3, *ballsound;
@@ -129,7 +129,7 @@ struct GamestateResources {
 #define AT_NIGHT_SUPPRESSION 0.5
 #define SCREENSHAKE 20
 
-int Gamestate_ProgressCount = 38; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 39; // number of loading steps as reported by Gamestate_Load
 
 static bool IsBetween(float val, float lim1, float lim2) {
 	return ((val >= lim1) && (val <= lim2)) || ((val >= lim2) && (val <= lim1));
@@ -730,7 +730,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 				if (data->animals[i].state == ANIMAL_WALKING) {
 					struct DrawCommand cmd = {&data->animals[i], data->animals[i].type->bitmap,
 						al_get_bitmap_width(data->animals[i].type->bitmap) / 2, al_get_bitmap_height(data->animals[i].type->bitmap) * 0.75,
-						x, y, atan(path->a) + (sin(time * 6000 + i) / 5.0), data->animals[i].reverse ? ALLEGRO_FLIP_HORIZONTAL : 0};
+						x, y, atan(path->a) + (sin(time * 6000 + data->animals[i].id) / 5.0), data->animals[i].reverse ? ALLEGRO_FLIP_HORIZONTAL : 0};
 					memcpy(&data->drawCommandBuffer[bufPos], &cmd, sizeof(cmd));
 					bufPos++;
 				} else {
@@ -931,23 +931,28 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 
 	if (!data->started) {
-		char* text;
+		char* text = NULL;
 		if (data->leftscore == 10) {
 			text = "Now wins!";
 		} else if (data->rightscore == 10) {
 			text = "Then wins!";
 		} else {
-			text = "Now and Then";
+			//text = "Now and Then";
+			al_draw_bitmap(data->title, 1920 / 2 - al_get_bitmap_width(data->title) / 2, 160, 0);
 		}
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 0, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 0, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
-		al_draw_text(data->big, al_map_rgb(255, 255, 255), 1920 / 2, 160, ALLEGRO_ALIGN_CENTER, text);
+
+		if (text) {
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 0, 160 + 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 0, 160 - 6, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 + 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 6, 160 + 0, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(0, 0, 0), 1920 / 2 - 10, 160 + 10, ALLEGRO_ALIGN_CENTER, text);
+			al_draw_text(data->big, al_map_rgb(255, 255, 255), 1920 / 2, 160, ALLEGRO_ALIGN_CENTER, text);
+		}
 
 		al_draw_text(data->small, al_map_rgb(0, 0, 0), 1920 / 2 - 4, 860 - 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
 		al_draw_text(data->small, al_map_rgb(0, 0, 0), 1920 / 2 + 4, 860 + 4, ALLEGRO_ALIGN_CENTER, "Press SPACE...");
@@ -1100,6 +1105,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->bee2 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka2.png"));
 	progress(game);
 	data->bee3 = al_load_bitmap(GetDataFilePath(game, "animals/pszczolka3.png"));
+	progress(game);
+	data->title = al_load_bitmap(GetDataFilePath(game, "title.png"));
 	progress(game);
 
 	data->rewind = al_load_audio_stream(GetDataFilePath(game, "sounds/rewind.ogg"), 8, 1024);
