@@ -80,7 +80,7 @@ struct GamestateResources {
 
 	ALLEGRO_AUDIO_STREAM *day1, *day2, *night1, *night2, *rewind, *music;
 
-	ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *scores, *scorebmp;
+	ALLEGRO_BITMAP *clock1, *clock2, *clockball1, *clockball2, *hand1, *hand2, *ball, *trees, *tree, *scores, *scorebmp;
 
 	struct AnimalRes dzik, ostronos, owca, leaf;
 
@@ -129,7 +129,7 @@ struct GamestateResources {
 #define AT_NIGHT_SUPPRESSION 0.5
 #define SCREENSHAKE 20
 
-int Gamestate_ProgressCount = 39; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 40; // number of loading steps as reported by Gamestate_Load
 
 static bool IsBetween(float val, float lim1, float lim2) {
 	return ((val >= lim1) && (val <= lim2)) || ((val >= lim2) && (val <= lim1));
@@ -772,6 +772,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data, double
 	}
 
 	al_draw_bitmap(data->trees, 0, 0, 0);
+	al_draw_rotated_bitmap(data->tree, 295, 512, 378 + 295, 456 + 512, (sin(time * 800) * 2 - 1) / 100.0, 0);
 
 	/*
 	for (unsigned int i = 0; i < (sizeof(data->paths) / sizeof(struct Path*)); i++) {
@@ -1073,6 +1074,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->frame = al_load_bitmap(GetDataFilePath(game, "frame.png"));
 	progress(game);
 	data->trees = al_load_bitmap(GetDataFilePath(game, "trees.png"));
+	progress(game);
+	data->tree = al_load_bitmap(GetDataFilePath(game, "tree.png"));
 	progress(game);
 	data->target = CreateNotPreservedBitmap(1920 / 2, 1080 / 2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
