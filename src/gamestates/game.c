@@ -1343,5 +1343,19 @@ void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
 	data->target = CreateNotPreservedBitmap(1920 / 2, 1080 / 2);
 	data->scene = CreateNotPreservedBitmap(1920, 1080);
 	data->scorebmp = CreateNotPreservedBitmap(1920, 1080);
+	al_destroy_shader(data->shader);
+	data->shader = al_create_shader(ALLEGRO_SHADER_GLSL);
+	PrintConsole(game, "VERTEX: %d", al_attach_shader_source_file(data->shader, ALLEGRO_VERTEX_SHADER, GetDataFilePath(game, "shaders/vertex.glsl")));
+	const char* log;
+	if ((log = al_get_shader_log(data->shader)) && (log[0])) {
+		PrintConsole(game, "%s", log);
+	}
+	PrintConsole(game, "PIXEL: %d", al_attach_shader_source_file(data->shader, ALLEGRO_PIXEL_SHADER, GetDataFilePath(game, "shaders/vhs.glsl")));
+	if ((log = al_get_shader_log(data->shader)) && (log[0])) {
+		PrintConsole(game, "%s", log);
+	}
 	al_build_shader(data->shader);
+	if ((log = al_get_shader_log(data->shader)) && (log[0])) {
+		PrintConsole(game, "%s", log);
+	}
 }
